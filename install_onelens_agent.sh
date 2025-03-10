@@ -285,7 +285,7 @@ login_to_ecr_public() {
 
 login_to_ecr_public
 
-helm repo update
+
 # Deploy the Helm chart
 helm upgrade --install onelens-agent -n onelens-agent --create-namespace oci://public.ecr.aws/w7k6q5m9/helm-charts/onelens-agent  --version $RELEASE_VERSION \
     --set onelens-agent.env.CLUSTER_NAME="$CLUSTER_NAME" \
