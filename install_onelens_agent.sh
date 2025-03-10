@@ -3,7 +3,7 @@
 # Exit on any error
 set -e
 
-RELEASE_VERSION="0.0.1-beta.7"
+RELEASE_VERSION="0.0.1-beta.10"
 IMAGE_TAG="v0.0.1-beta.10"
 TENANT_NAME=$1
 
