@@ -1,5 +1,5 @@
- #!/bin/bash
- 
+#!/bin/bash
+
 # Exit on any error
 set -e
 
@@ -9,15 +9,15 @@ TENANT_NAME=$1
 
 # Step 0: Checking prerequisites
 echo "Step 0: Checking prerequisites..."
- 
+
 # Check for AWS CLI
 if ! command -v aws &> /dev/null; then
     echo "Error: AWS CLI not found. Please install AWS CLI to proceed."
     echo "Install it from: https://aws.amazon.com/cli/"
     echo "Verify with: aws --version"
-    exit 
+    exit
 fi
- 
+
 # Check for Helm
 if ! command -v helm &> /dev/null; then
     echo "Error: Helm not found. Please install Helm version 3 or later."
@@ -25,7 +25,7 @@ if ! command -v helm &> /dev/null; then
     echo "Verify with: helm version --short"
     exit 1
 fi
- 
+
 # Check Helm version (must be v3 or later)
 HELM_VERSION=$(helm version --short | cut -d ' ' -f2 | cut -d '+' -f1)
 if [[ ! "$HELM_VERSION" =~ ^v3 ]]; then
@@ -34,21 +34,21 @@ if [[ ! "$HELM_VERSION" =~ ^v3 ]]; then
     echo "Install Helm v3+ from: https://helm.sh/docs/intro/install/"
     exit 1
 fi
- 
+
 # Check for kubectl
 if ! command -v kubectl &> /dev/null; then
     echo "Error: kubectl not found. Please install kubectl."
     echo "Ensure version matches your cluster: https://kubernetes.io/docs/tasks/tools/"
     exit 1
 fi
- 
+
 # Check AWS configuration
 if ! aws sts get-caller-identity &> /dev/null; then
     echo "Error: AWS CLI is not configured. Please run 'aws configure' to set up your credentials."
     echo "Run: aws configure"
     exit 1
 fi
- 
+
 # Step 1: Fetching current EKS context
 echo "Step 1: Fetching current EKS context..."
 CONTEXT=$(kubectl config current-context)
@@ -60,7 +60,7 @@ if [ -z "$CONTEXT" ]; then
     exit 1
 fi
 echo "Current context: $CONTEXT"
- 
+
 #The Availability Zone with the most nodes is: $max_zone
 max_zone=$(kubectl get nodes --output=json | jq -r '.items | group_by(.metadata.labels["failure-domain.beta.kubernetes.io/zone"]) | map({zone: .[0].metadata.labels["failure-domain.beta.kubernetes.io/zone"], count: length}) | max_by(.count) | .zone')
 
@@ -77,7 +77,7 @@ else
     exit 1
 fi
 echo "Cluster: $CLUSTER_NAME (Account: $ACCOUNT_ID, Region: $REGION)"
- 
+
 # Get OIDC issuer
 OIDC_ISSUER=$(aws eks describe-cluster --name "$CLUSTER_NAME" --query 'cluster.identity.oidc.issuer' --output text)
 if [ -z "$OIDC_ISSUER" ]; then
@@ -85,14 +85,14 @@ if [ -z "$OIDC_ISSUER" ]; then
     echo "Ensure AWS CLI has permissions to describe the cluster and the cluster name is correct."
     exit 1
 fi
- 
+
 # Step 2: Generate cluster payload
 PAYLOAD="$CLUSTER_NAME@$ACCOUNT_ID:$REGION@$OIDC_ISSUER"
 echo "Step 2: Generating cluster payload..."
 echo "Generated payload:"
 echo "  $PAYLOAD"
 echo ""
- 
+
 # Step 3: Prompt user to register payload in Onelens
 echo "Step 3: Copy the above payload and register it in Onelens."
 echo "Finally, enter the IAM ARN for the tenant when you are done."
@@ -133,10 +133,10 @@ cleanup_test_resources
 check_access() {
     local start_time=$(date +%s)
     local end_time=$((start_time + 60))
-    local check_interval=3
-    
+    local check_interval=15
+
     echo "Creating test service account in onelens-agent namespace..."
-    
+
     # Create service account with the IAM role annotation
     cat <<EOF | kubectl apply -f -
 apiVersion: v1
@@ -147,7 +147,7 @@ metadata:
   annotations:
     eks.amazonaws.com/role-arn: ${IAM_ARN}
 EOF
-    
+
     echo "Creating test pod to verify S3 ..."
     cat <<EOF | kubectl apply -f -
 apiVersion: v1
@@ -175,28 +175,29 @@ spec:
   - name: result
     emptyDir: {}
 EOF
- 
+
     echo "Checking S3 access permissions..."
-    echo "This will retry for 60 seconds, checking every 3 seconds..."
-    
+    echo "This will retry for 60 seconds, checking every 15 seconds..."
+
     while [ $(date +%s) -lt $end_time ]; do
-        # Check if the pod is ready and fetch the result file in one step
-        result=$(kubectl exec -n onelens-agent permissions-test -- sh -c "cat /tmp/result" 2>/dev/null)
-    
-        if [ "$result" = "success" ]; then
-            echo "✓ S3 access verified"
-            echo "All required permissions are now available!"
-            cleanup_test_resources
-            return 0
-        elif [ "$result" = "failed" ]; then
-            echo "✗ Permission check failed"
-            echo "Waiting for permissions to propagate..."
-        else
-            echo "Waiting for test pod to complete..."
+        if kubectl wait --for=condition=ready pod/permissions-test -n onelens-agent --timeout=5s &> /dev/null; then
+            result=$(kubectl exec -n onelens-agent permissions-test -- cat /tmp/result 2>/dev/null || echo "pending")
+
+            if [ "$result" = "success" ]; then
+                echo "✓ S3 access verified"
+                echo "All required permissions are now available!"
+                cleanup_test_resources
+                return 0
+            elif [ "$result" = "failed" ]; then
+                echo "✗ Permission check failed"
+                echo "Waiting for permissions to propagate..."
+                sleep $check_interval
+            fi
         fi
-        
+        echo "Waiting for test pod to complete..."
         sleep $check_interval
     done
+
     echo "Error: Failed to verify S3  after 60 seconds."
     echo "Please verify the following:"
     echo "1. The IAM role has the required permissions:"
@@ -206,7 +207,7 @@ EOF
     cleanup_test_resources
     exit 1
 }
- 
+
 # Run the access check
 check_access
 
@@ -233,7 +234,7 @@ read -p "Enter your choice (1/2): " PVC_CHOICE
 
 if [ "$PVC_CHOICE" = "1" ]; then
     echo "Remember: Data loss will happen if Prometheus pod restarts before data export."
-elif [ "$PVC_CHOICE" = "2" ]; then    
+elif [ "$PVC_CHOICE" = "2" ]; then
     check_ebs_driver
     PVC_ENABLED=true
 else
@@ -241,12 +242,12 @@ else
     exit 1
 fi
 
- 
 
- 
+
+
 # Step 6: Deploy the Onelens Agent via Helm
 echo "Step 6: Deploying Onelens Agent..."
- 
+
 echo "Checking for system:masters group membership..."
 if ! kubectl auth can-i '*' '*' --all-namespaces &> /dev/null; then
     echo "Warning: Limited permissions detected. system:masters group membership is recommended."
