@@ -165,7 +165,7 @@ spec:
     - -c
     - |
       aws s3 ls s3://onelens-kubernetes-agent/$TENANT_NAME &&
-      sleep 60 &&
+      sleep 30 &&
       echo "success" > /tmp/result ||
       echo "failed" > /tmp/result
     volumeMounts:
@@ -180,24 +180,23 @@ EOF
     echo "This will retry for 60 seconds, checking every 3 seconds..."
     
     while [ $(date +%s) -lt $end_time ]; do
-        if kubectl wait --for=condition=ready pod/permissions-test -n onelens-agent --timeout=3s &> /dev/null; then
-            result=$(kubectl exec -n onelens-agent permissions-test -- cat /tmp/result 2>/dev/null || echo "pending")
-            
-            if [ "$result" = "success" ]; then
-                echo "✓ S3 access verified"
-                echo "All required permissions are now available!"
-                cleanup_test_resources
-                return 0
-            elif [ "$result" = "failed" ]; then
-                echo "✗ Permission check failed"
-                echo "Waiting for permissions to propagate..."
-                sleep $check_interval
-            fi
+        # Check if the pod is ready and fetch the result file in one step
+        result=$(kubectl exec -n onelens-agent permissions-test -- sh -c "cat /tmp/result" 2>/dev/null)
+    
+        if [ "$result" = "success" ]; then
+            echo "✓ S3 access verified"
+            echo "All required permissions are now available!"
+            cleanup_test_resources
+            return 0
+        elif [ "$result" = "failed" ]; then
+            echo "✗ Permission check failed"
+            echo "Waiting for permissions to propagate..."
+        else
+            echo "Waiting for test pod to complete..."
         fi
-        echo "Waiting for test pod to complete..."
+        
         sleep $check_interval
     done
-    
     echo "Error: Failed to verify S3  after 60 seconds."
     echo "Please verify the following:"
     echo "1. The IAM role has the required permissions:"
