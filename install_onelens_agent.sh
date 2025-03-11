@@ -132,8 +132,8 @@ cleanup_test_resources
 # Function to check S3  access
 check_access() {
     local start_time=$(date +%s)
-    local end_time=$((start_time + 60))
-    local check_interval=15
+    local end_time=$((start_time + 80))
+    local check_interval=10
 
     echo "Creating test service account in onelens-agent namespace..."
 
@@ -177,7 +177,7 @@ spec:
 EOF
 
     echo "Checking S3 access permissions..."
-    echo "This will retry for 60 seconds, checking every 15 seconds..."
+    echo "This will retry for 60 seconds, checking every 10 seconds..."
 
     while [ $(date +%s) -lt $end_time ]; do
         if kubectl wait --for=condition=ready pod/permissions-test -n onelens-agent --timeout=5s &> /dev/null; then
