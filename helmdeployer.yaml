@@ -16,12 +16,10 @@ spec:
           image: onelens/helmdeployer:latest
           env:
             - name: TENANT_NAME
-              value: "your-tenant-name"  # Replace with actual tenant name
+              value: "dummy_tenat"  
             - name: ONELENS_SECRET_TOKEN
-              valueFrom:
-                secretKeyRef:
-                  name: onelens-secret
-                  key: secret-token  # Replace with actual secret key
+              value: "dummy_token"
+
 apiVersion: batch/v1
 kind: CronJob
 metadata:
@@ -43,9 +41,6 @@ spec:
               image: onelens/helmdeployer:latest
               env:
                 - name: TENANT_NAME
-                  value: "your-tenant-name"  
+                  value: "dummy_tenat"  
                 - name: ONELENS_SECRET_TOKEN
-                  valueFrom:
-                    secretKeyRef:
-                      name: onelens-secret
-                      key: secret-token 
+                  value: "dummy_token"
