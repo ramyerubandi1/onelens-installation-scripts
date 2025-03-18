@@ -7,44 +7,6 @@ RELEASE_VERSION="0.0.1-beta.10"
 IMAGE_TAG="v0.0.1-beta.10"
 TENANT_NAME=$1
 
-
-#!/bin/bash
-
-# Define versions
-HELM_VERSION="v3.13.2"  # Replace with latest version if needed
-KUBECTL_VERSION="v1.28.2"  # Replace with latest version
-
-# Detect architecture
-ARCH=$(uname -m)
-
-if [[ "$ARCH" == "x86_64" ]]; then
-    ARCH_TYPE="amd64"
-elif [[ "$ARCH" == "aarch64" || "$ARCH" == "arm64" ]]; then
-    ARCH_TYPE="arm64"
-else
-    echo "Unsupported architecture: $ARCH"
-    exit 1
-fi
-
-echo "Detected architecture: $ARCH_TYPE"
-
-# Install Helm
-echo "Installing Helm for $ARCH_TYPE..."
-curl -fsSL "https://get.helm.sh/helm-${HELM_VERSION}-linux-${ARCH_TYPE}.tar.gz" -o helm.tar.gz && \
-    tar -xzvf helm.tar.gz && \
-    mv linux-${ARCH_TYPE}/helm /usr/local/bin/helm && \
-    rm -rf linux-${ARCH_TYPE} helm.tar.gz
-
-# Verify Helm installation
-helm version
-
-# Install kubectl
-echo "Installing kubectl for $ARCH_TYPE..."
-curl -LO "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/${ARCH_TYPE}/kubectl" && \
-    chmod +x kubectl && \
-    mv kubectl /usr/local/bin/kubectl
-
-
 # Step 0: Checking prerequisites
 echo "Step 0: Checking prerequisites..."
 
