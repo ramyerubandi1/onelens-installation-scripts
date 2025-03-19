@@ -291,7 +291,7 @@ helm upgrade --install onelens-agent -n onelens-agent --create-namespace oci://p
     --set onelens-agent.env.CLUSTER_NAME="$CLUSTER_NAME" \
     --set prometheus-opencost-exporter.opencost.exporter.defaultClusterId="$CLUSTER_NAME" \
     --set onelens-agent.env.TENANT_NAME="$TENANT_NAME" \
-    --set onelens-agent.env.ACCOUNT_ID=$ESCAPED_ACCOUNT_ID \
+    --set-string onelens-agent.env.ACCOUNT_ID=${ACCOUNT_ID} \
     --set onelens-agent.env.AWS_CLUSTER_REGION="$REGION" \
     --set onelens-agent.serviceAccount.annotations."eks\.amazonaws\.com/role-arn"="$IAM_ARN" \
     --set onelens-agent.image.repository=public.ecr.aws/w7k6q5m9/onelens-agent \
