@@ -69,7 +69,6 @@ if [[ $CONTEXT =~ arn:aws:eks:([^:]+):([^:]+):cluster/(.+) ]]; then
     REGION=${BASH_REMATCH[1]}
     ACCOUNT_ID=${BASH_REMATCH[2]}
     CLUSTER_NAME=${BASH_REMATCH[3]}
-    ESCAPED_ACCOUNT_ID="\"${ACCOUNT_ID}\""
 else
     echo "Error: Unable to parse cluster information from context."
     echo "Expected format: arn:aws:eks:<region>:<account-id>:cluster/<cluster-name>"
