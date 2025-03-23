@@ -1,0 +1,17 @@
+{{- if .Values.cronjob.enabled }}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ .Values.cronjob.name }}
+spec:
+  schedule: "{{ .Values.cronjob.schedule }}"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+            - name: {{ .Values.cronjob.name }}
+              image: {{ .Values.cronjob.image }}
+              command: {{ toJson .Values.cronjob.command }}
+          restartPolicy: {{ .Values.cronjob.restartPolicy }}
+{{- end }}

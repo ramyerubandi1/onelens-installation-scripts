@@ -1,0 +1,20 @@
+{{- if .Values.job.enabled }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ .Values.job.name }}
+spec:
+  template:
+    spec:
+      serviceAccountName: {{ .Values.serviceAccount.name }}
+      containers:
+        - name: {{ .Values.job.name }}
+          image: {{ .Values.job.image }}
+          imagePullPolicy: {{ .Values.job.imagePullPolicy }}
+          env:
+            {{- range $key, $value := .Values.job.env }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+      restartPolicy: {{ .Values.job.restartPolicy }}
+{{- end }}

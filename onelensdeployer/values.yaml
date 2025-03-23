@@ -1,0 +1,26 @@
+job:
+  enabled: true
+  name: my-job
+  image: public.ecr.aws/w7k6q5m9/onelens-deployer
+  imagePullPolicy: Always
+  restartPolicy: OnFailure
+  env: {}
+
+cronjob:
+  enabled: false
+  name: my-cronjob
+  schedule: "*/5 * * * *"
+  image: busybox
+  command: ["/bin/sh", "-c", "echo Hello from CronJob"]
+  restartPolicy: OnFailure
+
+serviceAccount:
+  enabled: true
+  name: onelensdeployer-sa
+namespace: default
+
+
+clusterRoleBinding:
+  name: helm-deployer-binding
+
+
