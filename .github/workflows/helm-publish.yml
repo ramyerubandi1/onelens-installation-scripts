@@ -1,0 +1,38 @@
+name: Publish Helm Charts
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - "charts/**"
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Setup Helm
+        uses: azure/setup-helm@v3
+        with:
+          version: v3.12.0
+
+      - name: Package Helm Chart
+        run: |
+          mkdir -p docs
+          helm package charts/* -d docs/
+
+      - name: Update Helm Repo Index
+        run: |
+          helm repo index docs --url https://your-github-username.github.io/helm-charts/
+      
+      - name: Commit and Push Changes
+        run: |
+          git config --global user.name "github-actions"
+          git config --global user.email "github-actions@github.com"
+          git add docs/
+          git commit -m "Updated Helm charts [CI]"
+          git push origin main
