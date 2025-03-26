@@ -19,7 +19,6 @@ onelens-agent:
     enabled: true  
     name: onelens-sc
     volumeType: gp3
-    az: ap-south-1a
 
   resources:
     requests:
