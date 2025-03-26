@@ -1,19 +1,12 @@
 #!/bin/sh
 set -eux  
 
-#Command that client will execute.
-# helm repo add onelens https://manoj-astuto.github.io/onelens-charts && \
-# helm repo update && \
-# helm upgrade --install onelensdeployer onelens/onelensdeployer \
-#   --set job.env.SECRET_TOKEN=<hsjdahskjdhasjdhakjsd> \
-#   --set job.env.CLUSTER_NAME=main \ 
-#   --set job.env.REGION=ap-south-1 \ 
-#   --set-string job.env.Account=434916866699
-RELEASE_VERSION="0.0.1-beta.10"
-IMAGE_TAG="v0.0.1-beta.10"
+
+RELEASE_VERSION="0.1.1-beta.2"
+IMAGE_TAG="v0.1.1-beta.2"
 
 TIMESTAMP=$(date +"%Y%m%d%H%M%S")
-LOG_FILE="/tmp/${Account}_${CLUSTER_NAME}_${TIMESTAMP}.log"
+LOG_FILE="/tmp/${CLUSTER_NAME}_${TIMESTAMP}.log"
 API_URL="https://dev-api.onelens.cloud/"
 
 
@@ -144,8 +137,10 @@ fi
 helm upgrade --install onelens-agent -n onelens-agent --create-namespace onelens/onelens-agent \
     --version "$RELEASE_VERSION" \
     --set onelens-agent.env.CLUSTER_NAME="$CLUSTER_NAME" \
+    --set onelens-agent.secrets.API_BASE_URL="$API_BASE_URL" \
+    --set onelens-agent.secrets.CLUSTER_TOKEN="$CLUSTER_TOKEN" \
+    --set onelens-agent.secrets.REGISTRATION_ID="$REGISTRATION_ID" \
     --set prometheus-opencost-exporter.opencost.exporter.defaultClusterId="$CLUSTER_NAME" \
-    --set onelens-agent.image.repository=public.ecr.aws/w7k6q5m9/onelens-agent \
     --set onelens-agent.image.tag="$IMAGE_TAG" \
     --set prometheus.server.persistentVolume.enabled="$PVC_ENABLED" \
     --set prometheus.server.resources.requests.cpu="$CPU_REQUEST" \
