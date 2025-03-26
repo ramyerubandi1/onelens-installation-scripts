@@ -15,7 +15,7 @@ IMAGE_TAG="v0.0.1-beta.10"
 TIMESTAMP=$(date +"%Y%m%d%H%M%S")
 LOG_FILE="/tmp/${Account}_${CLUSTER_NAME}_${TIMESTAMP}.log"
 API_URL="https://dev-api.onelens.cloud/"
-BEARER_TOKEN="OWMyN2FhZjUtYzljMC00ZWI5LTg1MTgtMWU5NzM0NjllMDU2"
+
 
 # Capture all script output
 exec > >(tee -a "$LOG_FILE") 2>&1
@@ -25,28 +25,12 @@ send_logs() {
     echo "Sending logs to API..."
     curl -X POST "$API_URL" \
          -H "Content-Type: application/json" \
-         -H "Authorization: Bearer $BEARER_TOKEN" \
+         -H "Authorization: Bearer $SECRET_TOKEN" \
          -d "{\"log\": $(jq -Rs . < \"$LOG_FILE\")}" || echo "Failed to send logs"
 }
 
 # Trap EXIT and ERR signals to send logs before exiting
 trap send_logs EXIT ERR
-
-
-# Install dependencies
-apk add --no-cache \
-    curl \
-    tar \
-    gzip \
-    bash \
-    git \
-    unzip \
-    wget \
-    jq \
-    less \
-    groff \
-    python3 \
-    py3-pip
 
 
 # Step 0: Checking prerequisites
@@ -138,14 +122,34 @@ check_ebs_driver
 PVC_ENABLED=true
 echo "Persistent storage for Prometheus is ENABLED."
 
-helm repo add onelens https://manoj-astuto.github.io/onelens-charts && \
-helm repo update && \
-helm upgrade --install onelens-agent -n onelens-agent --create-namespace onelens/onelens-agent --version $RELEASE_VERSION \
+
+# Fetch the total number of pods in the cluster
+TOTAL_PODS=$(kubectl get pods --all-namespaces --no-headers | wc -l)
+
+echo "Total number of pods in the cluster: $TOTAL_PODS"
+
+# Define common Helm repo commands
+helm repo add onelens https://manoj-astuto.github.io/onelens-charts && helm repo update
+
+# Determine resource allocation based on the number of pods
+if [ "$TOTAL_PODS" -lt 100 ]; then
+    CPU_REQUEST="500m"
+    MEMORY_REQUEST="2000Mi"
+else
+    CPU_REQUEST="1000m"
+    MEMORY_REQUEST="4000Mi"
+fi
+
+# Deploy using Helm
+helm upgrade --install onelens-agent -n onelens-agent --create-namespace onelens/onelens-agent \
+    --version "$RELEASE_VERSION" \
     --set onelens-agent.env.CLUSTER_NAME="$CLUSTER_NAME" \
     --set prometheus-opencost-exporter.opencost.exporter.defaultClusterId="$CLUSTER_NAME" \
     --set onelens-agent.image.repository=public.ecr.aws/w7k6q5m9/onelens-agent \
     --set onelens-agent.image.tag="$IMAGE_TAG" \
     --set prometheus.server.persistentVolume.enabled="$PVC_ENABLED" \
+    --set prometheus.server.resources.requests.cpu="$CPU_REQUEST" \
+    --set prometheus.server.resources.requests.memory="$MEMORY_REQUEST" \
     --wait || { 
         echo "Error: Helm deployment failed."; 
         exit 1; 
