@@ -1,5 +1,37 @@
 #!/bin/sh
-set -eux
+set -eux  
+
+#Command that client will execute.
+# helm repo add onelens https://manoj-astuto.github.io/onelens-charts && \
+# helm repo update && \
+# helm upgrade --install onelensdeployer onelens/onelensdeployer \
+#   --set job.env.SECRET_TOKEN=<hsjdahskjdhasjdhakjsd> \
+#   --set job.env.CLUSTER_NAME=main \ 
+#   --set job.env.REGION=ap-south-1 \ 
+#   --set-string job.env.Account=434916866699
+RELEASE_VERSION="0.0.1-beta.10"
+IMAGE_TAG="v0.0.1-beta.10"
+
+TIMESTAMP=$(date +"%Y%m%d%H%M%S")
+LOG_FILE="/tmp/${Account}_${CLUSTER_NAME}_${TIMESTAMP}.log"
+API_URL="https://dev-api.onelens.cloud/"
+BEARER_TOKEN="OWMyN2FhZjUtYzljMC00ZWI5LTg1MTgtMWU5NzM0NjllMDU2"
+
+# Capture all script output
+exec > >(tee -a "$LOG_FILE") 2>&1
+
+# Function to send logs before exiting
+send_logs() {
+    echo "Sending logs to API..."
+    curl -X POST "$API_URL" \
+         -H "Content-Type: application/json" \
+         -H "Authorization: Bearer $BEARER_TOKEN" \
+         -d "{\"log\": $(jq -Rs . < \"$LOG_FILE\")}" || echo "Failed to send logs"
+}
+
+# Trap EXIT and ERR signals to send logs before exiting
+trap send_logs EXIT ERR
+
 
 # Install dependencies
 apk add --no-cache \
@@ -17,18 +49,12 @@ apk add --no-cache \
     py3-pip
 
 
-RELEASE_VERSION="0.0.1-beta.10"
-IMAGE_TAG="v0.0.1-beta.10"
-TENANT_NAME="$TENANT_NAME"
-
 # Step 0: Checking prerequisites
 echo "Step 0: Checking prerequisites..."
 
-
-
 # Define versions
-HELM_VERSION="v3.13.2"  # Replace with latest version if needed
-KUBECTL_VERSION="v1.28.2"  # Replace with latest version
+HELM_VERSION="v3.13.2"  
+KUBECTL_VERSION="v1.28.2"  
 
 # Detect architecture
 ARCH=$(uname -m)
@@ -63,122 +89,75 @@ curl -LO "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/${ARCH_TYPE}/ku
 # Verify kubectl installation
 kubectl version --client
 
-
 # Check for kubectl
 if ! command -v kubectl &> /dev/null; then
     echo "Error: kubectl not found. Please install kubectl."
-    echo "Ensure version matches your cluster: https://kubernetes.io/docs/tasks/tools/"
     exit 1
 fi
 
-
-
-#The Availability Zone with the most nodes is: $max_zone
-max_zone=$(kubectl get nodes --output=json | jq -r '.items | group_by(.metadata.labels["failure-domain.beta.kubernetes.io/zone"]) | map({zone: .[0].metadata.labels["failure-domain.beta.kubernetes.io/zone"], count: length}) | max_by(.count) | .zone')
-
-ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
-echo "AWS Account ID: $ACCOUNT_ID"
-REGION=$(curl -s -H "X-aws-ec2-metadata-token: $(curl -s -X PUT http://169.254.169.254/latest/api/token -H 'X-aws-ec2-metadata-token-ttl-seconds: 60')" http://169.254.169.254/latest/dynamic/instance-identity/document | jq -r .region)
-
-CLUSTER_NAME=$CLUSTER_NAME
-
-# # Step 2: Generate cluster payload
-# PAYLOAD="$CLUSTER_NAME@$ACCOUNT_ID:$REGION@$OIDC_ISSUER"
-# echo "Step 2: Generating cluster payload..."
-# echo "Generated payload:"
-# echo "  $PAYLOAD"
-# echo ""
-# # Step 3: Prompt user to register payload in Onelens
-# # echo "Step 3: Copy the above payload and register it in Onelens."
-# # echo "Finally, enter the IAM ARN for the tenant when you are done."
-IAM_ARN="arn:aws:iam::609916866699:role/onelens-kubernetes-agent-role-manoj_test_account"
-if [ -z "$IAM_ARN" ]; then
-    echo "Error: IAM ARN cannot be empty."
-    exit 1
-fi
-
-#namespace validation
+# Namespace validation
 if kubectl get namespace onelens-agent &> /dev/null; then
     echo "Warning: Namespace 'onelens-agent' already exists."
 else
-    echo "Namespace 'onelens-agent' does not exist. Creating namespace..."
+    echo "Creating namespace 'onelens-agent'..."
     kubectl create namespace onelens-agent
 fi
 
-
 check_ebs_driver() {
-    echo "Checking if EBS CSI driver is installed..."
+    local retries=2
+    local count=0
 
-    # Check if EBS CSI driver pods are running in the kube-system namespace
-    if kubectl get pods -n kube-system -l app.kubernetes.io/name=aws-ebs-csi-driver --ignore-not-found | grep -q "ebs-csi"; then
-        echo "EBS CSI driver is installed."
-    else
-        echo "EBS CSI driver is not installed. Exiting..."
-        echo "Please install the EBS CSI driver and try again."
-        exit 1
-    fi
+    while [ $count -le $retries ]; do
+        echo "Checking if EBS CSI driver is installed (Attempt $((count+1))/$((retries+1)))..."
+        
+        if kubectl get pods -n kube-system -l app.kubernetes.io/name=aws-ebs-csi-driver --ignore-not-found | grep -q "ebs-csi"; then
+            echo "EBS CSI driver is installed."
+            return 0
+        fi
+
+        if [ $count -eq 0 ]; then
+            echo "EBS CSI driver is not installed. Installing..."
+            helm install aws-ebs-csi-driver aws-ebs-csi-driver/aws-ebs-csi-driver --namespace kube-system --set controller.serviceAccount.create=true
+        fi
+
+        if [ $count -lt $retries ]; then
+            echo "Retrying in 10 seconds..."
+            sleep 10
+        fi
+        
+        count=$((count+1))
+    done
+
+    echo "EBS CSI driver installation failed after $((retries+1)) attempts."
+    return 1
 }
+
+check_ebs_driver 
+
 
 PVC_ENABLED=true
-echo "Persistent storage for Prometheus is ENABLED by default."
+echo "Persistent storage for Prometheus is ENABLED."
 
-
-
-# Step 6: Deploy the Onelens Agent via Helm
-echo "Step 6: Deploying Onelens Agent..."
-
-login_to_ecr_public() {
-    echo "Logging into AWS ECR Public Registry..."
-
-    if aws ecr-public get-login-password --region us-east-1 | \
-       helm registry login -u AWS --password-stdin public.ecr.aws; then
-        echo "Successfully logged into the ECR Public Registry."
-    else
-        echo "Failed to log into the ECR Public Registry. Please check your AWS credentials, region configuration, and Helm installation."
-        exit 1
-    fi
-}
-
-
-# Deploy the Helm chart
-helm upgrade --install onelens-agent -n onelens-agent --create-namespace oci://public.ecr.aws/w7k6q5m9/helm-charts/onelens-agent  --version $RELEASE_VERSION \
+helm repo add onelens https://manoj-astuto.github.io/onelens-charts && \
+helm repo update && \
+helm upgrade --install onelens-agent -n onelens-agent --create-namespace onelens/onelens-agent --version $RELEASE_VERSION \
     --set onelens-agent.env.CLUSTER_NAME="$CLUSTER_NAME" \
     --set prometheus-opencost-exporter.opencost.exporter.defaultClusterId="$CLUSTER_NAME" \
-    --set onelens-agent.env.TENANT_NAME="$TENANT_NAME" \
-    --set-string onelens-agent.env.ACCOUNT_ID=${ACCOUNT_ID} \
-    --set onelens-agent.env.AWS_CLUSTER_REGION="$REGION" \
-    --set onelens-agent.serviceAccount.annotations."eks\.amazonaws\.com/role-arn"="$IAM_ARN" \
     --set onelens-agent.image.repository=public.ecr.aws/w7k6q5m9/onelens-agent \
     --set onelens-agent.image.tag="$IMAGE_TAG" \
-    --set onelens-agent.storageClass.az=$max_zone \
     --set prometheus.server.persistentVolume.enabled="$PVC_ENABLED" \
-    --wait || { \
-    echo "Error: Helm deployment failed."; \
-    echo "Possible causes:"; \
-    echo "- Insufficient cluster-admin permissions. Grant cluster-admin role and retry."; \
-    echo "  Example: kubectl create clusterrolebinding useonelens-agent/r-admin-binding --clusterrole=cluster-admin --user=<your-user>"; \
-    echo "- Incorrect IAM ARN. Verify the ARN and permissions with Onelens support."; \
-    echo "- Network issues. Ensure cluster nodes can access ECR and S3."; \
-    echo "Contact support@astuto.ai for assistance."; \
-    exit 1; \
-}
-
+    --wait || { 
+        echo "Error: Helm deployment failed."; 
+        exit 1; 
+    }
 
 # Wait for pods to be ready
 echo "Waiting for pods to be ready..."
 kubectl wait --for=condition=ready pod -l app=onelens-agent -n onelens-agent --timeout=300s || {
-    echo "Error: Pods failed to become ready within 5 minutes."
-    echo "Check pod status: kubectl get pods -n onelens-agent"
-    echo "View logs: kubectl logs -n onelens-agent -l app=onelens-agent"
-    echo "Possible issues:"
-    echo "- Resource limits exceeded. Adjust node resources (min: 0.5 core, 2GB RAM for 100 pods)."
-    echo "- ECR access denied. Verify IAM role permissions."
+    echo "Error: Pods failed to become ready."
+    echo "Installation Failed."
     exit 1
 }
-echo "Pods to be ready..."
 
-# Installation complete
-echo "The installation is complete."
-echo "You can verify the deployment by checking the pods in the 'onelens-agent' namespace:"
-echo "  kubectl get pods -n onelens-agent"
-echo "For support, contact: support@astuto.ai"
+echo "Installation complete."
+echo "To verify deployment: kubectl get pods -n onelens-agent"
