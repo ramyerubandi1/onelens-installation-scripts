@@ -1,0 +1,12 @@
+dependencies:
+- name: onelens-agent-base
+  repository: oci://609916866699.dkr.ecr.ap-south-1.amazonaws.com/helm-charts
+  version: 0.0.1-beta.10
+- name: prometheus
+  repository: https://prometheus-community.github.io/helm-charts
+  version: 27.3.0
+- name: prometheus-opencost-exporter
+  repository: https://prometheus-community.github.io/helm-charts
+  version: 0.1.1
+digest: sha256:0896cb3ab9c4867bde07c2acfe3823989432add86fcfae1be9639209eb0d0812
+generated: "2025-03-10T13:00:11.559669+05:30"

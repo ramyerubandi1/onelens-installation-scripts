@@ -1,0 +1,202 @@
+onelens-agent:
+  enabled: true
+
+  image:
+    repository: public.ecr.aws/w7k6q5m9/onelens-agent
+    tag: v0.0.1-beta.10
+    pullPolicy: IfNotPresent
+
+  serviceAccount:
+    enabled: true
+    name: "onelens-agent-sa"
+    annotations:
+      eks.amazonaws.com/role-arn: null
+
+  podDisruptionBudget:
+    enabled: true
+
+  storageClass:
+    enabled: true  
+    name: onelens-sc
+    volumeType: gp3
+    az: ap-south-1a
+
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "128Mi"
+    limits:
+      cpu: "500m"
+      memory: "256Mi"
+
+  env:
+    # Used to create s3 prefix: s3://[s3_bucket_name]/[tenant_name]/[account_id]/[aws_cluster_region]/[cluster_name]/
+    S3_BUCKET_NAME: "onelens-kubernetes-agent"
+    TENANT_NAME: "astuto"
+    ACCOUNT_ID: "609916866699"
+    AWS_CLUSTER_REGION: "ap-south-1"
+    CLUSTER_NAME: "onelens"
+    AWS_S3_CONFIG: "config"
+
+    # URL Configuration
+    OPENCOST_API_URL: "http://onelens-agent-prometheus-opencost-exporter:9003/allocation"
+    PROMETHEUS_API_URL: "http://onelens-agent-prometheus-server:80/api/v1/query"
+    OPENCOST_HEALTH_CHECKER_URL: "http://onelens-agent-prometheus-opencost-exporter:9003/healthz"
+    PROMETHEUS_HEALTH_CHECKER_URL: "http://onelens-agent-prometheus-server:80/-/healthy"
+    HEALTH_CHECKER_PORT: "8000"
+
+    # Retry Configurations
+    API_MAX_RETRIES: "3"
+    API_RETRY_DELAY: "5"
+
+    # Over the time value for queries
+    # Seconds: Used for backfill step seconds, and is check for skipping the premature cron jobs execution; Also the default time window for the no previous execution found
+    PROM_TIME_WINDOW: "3600"
+
+    # offset from the current time to start the backfill
+    # Seconds: Used for backfill time window threshold, is the default time window for the manual backfill, max lookup = 168 hours (7 days)
+    TIME_WINDOW: "604800"
+
+    # Seconds: Used for last success upload interval (should be b/w prom_time_window and 2 * prom_time_window) check to start the automatic backfill
+    LAST_SUCCESS_UPLOAD_INTERVAL: "7100"
+
+    # Used to trigger backfill manually
+    MANUAL_BACKFILL: "false"
+
+    # Seconds: Used for agent execution interval, default is 3600 seconds (1 hour);
+    # EXECUTION_INTERVAL_SECONDS: 300 # TODO: Is not used in the code
+
+    # JSON File Path
+    OPENCOST_QUERIES_FILE: opencost_queries.json
+    PROMETHEUS_QUERIES_FILE: prometheus_queries.json
+
+prometheus:
+  enabled: true
+  server:
+    image:
+      repository: quay.io/prometheus/prometheus
+      tag: "v3.1.0"
+      pullPolicy: IfNotPresent
+    persistentVolume:
+      enabled: false
+      storageClass: onelens-sc
+      accessModes:
+        - ReadWriteOnce
+      mountPath: /data
+      size: 10Gi
+      annotations:
+        helm.sh/resource-policy: keep
+    retention: "30d"
+    retentionSize: "9GB"
+
+
+  extraScrapeConfigs: |
+    - job_name: opencost
+      honor_labels: true
+      scrape_interval: 1m
+      scrape_timeout: 10s
+      metrics_path: /metrics
+      scheme: http
+      dns_sd_configs:
+      - names:
+        - onelens-agent-prometheus-opencost-exporter
+        type: 'A'
+        port: 9003
+  alertmanager:
+    enabled: false
+  kube-state-metrics:
+    enabled: true
+    collectors:
+      - cronjobs                     # Scheduled jobs that run at specified intervals
+      - daemonsets                   # Ensures a pod runs on all (or some) nodes
+      - deployments                  # Manages ReplicaSets and Pods
+      - horizontalpodautoscalers     # Automatically scales Pod replicas based on metrics
+      - jobs                         # One-time tasks that run to completion
+      - limitranges                  # Enforces resource limits in a namespace
+      - namespaces                   # Virtual clusters within a physical cluster
+      - nodes                        # Physical or virtual machines in the cluster
+      - persistentvolumeclaims       # Storage requests by Pods
+      - persistentvolumes           # Cluster storage resources
+      - pods                        # Smallest deployable units in Kubernetes
+      - replicasets                 # Maintains a stable set of replica Pods
+      - resourcequotas              # Limits aggregate resource consumption per namespace
+      - statefulsets               # Manages stateful applications
+      - storageclasses             # Defines different classes of storage
+    # Comma-separated list of metrics to be exposed.
+    # This list comprises of exact metric names and/or regex patterns.
+    # The allowlist and denylist are mutually exclusive.
+    metricAllowlist: []
+
+    # Comma-separated list of metrics not to be enabled.
+    # This list comprises of exact metric names and/or regex patterns.
+    # The allowlist and denylist are mutually exclusive.
+    metricDenylist: []
+
+    metricLabelsAllowlist:
+      - namespaces=[*]
+      - pods=[*]
+      - deployments=[*]
+      - replicasets=[*]
+      - daemonsets=[*]
+      - statefulsets=[*]
+      - cronjobs=[*]
+      - jobs=[*]
+      - horizontalpodautoscalers=[*]
+      - limitranges=[*]
+      - persistentvolumeclaims=[*]
+      - storageclasses=[*]
+      - nodes=[*]
+      - resourcequotas=[*]
+      - persistentvolumes=[*]
+  prometheus-pushgateway:
+    enabled: true
+  prometheus-node-exporter:
+    enabled: false
+    nodeSelector:
+      kubernetes.io/os: linux
+    tolerations:
+      - effect: NoSchedule
+        operator: Exists
+  kubernetes.io/os: linux
+  global:
+    scrape_interval: 30s
+    scrape_timeout: 10s
+    evaluation_interval: 1m
+
+prometheus-opencost-exporter:
+  enabled: true
+  opencost:    
+    exporter:
+      cloudProviderApiKey: ""
+      defaultClusterId: 'default-cluster'
+      image:
+        registry: quay.io
+        repository: kubecost1/kubecost-cost-model
+        tag: ""
+        pullPolicy: IfNotPresent
+      replicas: 1
+      resources:
+        requests:
+          cpu: '10m'
+          memory: '55Mi'
+        limits:
+          cpu: '999m'
+          memory: '1Gi'
+      persistence:
+        enabled: false
+    prometheus:
+      secret_name: ~
+      username: ""
+      username_key: DB_BASIC_AUTH_USERNAME
+      password: ""
+      password_key: DB_BASIC_AUTH_PW
+      bearer_token: ""
+      bearer_token_key: DB_BEARER_TOKEN
+      external:
+        enabled: false
+        url: "https://prometheus-dev.onelens.cloud"
+      internal:
+        enabled: true
+        serviceName: onelens-agent-prometheus-server
+        namespaceName: onelens-agent
+        port: 80
