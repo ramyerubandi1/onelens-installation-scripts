@@ -4,11 +4,10 @@ set -eux
 
 RELEASE_VERSION="0.1.1-beta.2"
 IMAGE_TAG="v0.1.1-beta.2"
-
 TIMESTAMP=$(date +"%Y%m%d%H%M%S")
-LOG_FILE="/tmp/${CLUSTER_NAME}_${TIMESTAMP}.log"
-API_URL="https://dev-api.onelens.cloud/"
-
+LOG_FILE="/tmp/${ACCOUNT}_${CLUSTER_NAME}_${TIMESTAMP}.log"
+API_URL="dev-api.onelens.cloud"
+TOKEN="OWMyN2FhZjUtYzljMC00ZWI5LTg1MTgtMWU5NzM0NjllMDU2"
 
 # Capture all script output
 exec > >(tee -a "$LOG_FILE") 2>&1
@@ -16,14 +15,34 @@ exec > >(tee -a "$LOG_FILE") 2>&1
 # Function to send logs before exiting
 send_logs() {
     echo "Sending logs to API..."
-    curl -X POST "$API_URL" \
-         -H "Content-Type: application/json" \
-         -H "Authorization: Bearer $SECRET_TOKEN" \
-         -d "{\"log\": $(jq -Rs . < \"$LOG_FILE\")}" || echo "Failed to send logs"
+    curl -X POST "$API_BASE_URL" \
+    -H "X-Secret-Token: $TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{
+        "registration_id": "$registration_id",
+        "cluster_token": "$cluster_token",
+        "status": "'"$(cat "$LOG_FILE")"'"
+    }'
 }
 
 # Trap EXIT and ERR signals to send logs before exiting
 trap send_logs EXIT ERR
+
+response=$(curl -X POST \
+  http://$API_URL/v1/kubernetes/registration \
+  -H "X-Secret-Token: $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "registration_token": "$REGISTRATION_TOKEN",
+    "cluster_name": "$CLUSTER_NAME",
+    "account_id": "$ACCOUNT",
+    "region": "$REGION",
+    "agent_version": "$RELEASE_VERSION"
+  }')
+
+# Extract registration_id and cluster_token using jq
+registration_id=$(echo $response | jq -r '.data.registration_id')
+cluster_token=$(echo $response | jq -r '.data.cluster_token')
 
 
 # Step 0: Checking prerequisites
@@ -81,7 +100,7 @@ else
 fi
 
 check_ebs_driver() {
-    local retries=2
+    local retries=1
     local count=0
 
     while [ $count -le $retries ]; do
@@ -159,4 +178,14 @@ kubectl wait --for=condition=ready pod -l app=onelens-agent -n onelens-agent --t
 }
 
 echo "Installation complete."
+curl -X PUT \
+  https://$API_URL/v1/kubernetes/registration \
+  -H "X-Secret-Token: $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "registration_id": "$registration_id",
+    "cluster_token": "$cluster_token",
+    "status": "CONNECTED"
+  }'
+
 echo "To verify deployment: kubectl get pods -n onelens-agent"
