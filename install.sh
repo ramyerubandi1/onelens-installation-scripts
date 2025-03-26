@@ -6,7 +6,7 @@ RELEASE_VERSION="0.1.1-beta.2"
 IMAGE_TAG="v0.1.1-beta.2"
 TIMESTAMP=$(date +"%Y%m%d%H%M%S")
 LOG_FILE="/tmp/${ACCOUNT}_${CLUSTER_NAME}_${TIMESTAMP}.log"
-API_URL="dev-api.onelens.cloud"
+API_BASE_URL="dev-api.onelens.cloud"
 TOKEN="OWMyN2FhZjUtYzljMC00ZWI5LTg1MTgtMWU5NzM0NjllMDU2"
 
 # Capture all script output
@@ -29,7 +29,7 @@ send_logs() {
 trap send_logs EXIT ERR
 
 response=$(curl -X POST \
-  http://$API_URL/v1/kubernetes/registration \
+  http://$API_BASE_URL/v1/kubernetes/registration \
   -H "X-Secret-Token: $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -179,7 +179,7 @@ kubectl wait --for=condition=ready pod -l app=onelens-agent -n onelens-agent --t
 
 echo "Installation complete."
 curl -X PUT \
-  https://$API_URL/v1/kubernetes/registration \
+  https://$API_BASE_URL/v1/kubernetes/registration \
   -H "X-Secret-Token: $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
