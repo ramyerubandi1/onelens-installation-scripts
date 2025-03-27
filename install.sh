@@ -10,7 +10,7 @@ LOG_FILE="/tmp/${ACCOUNT}_${CLUSTER_NAME}_${TIMESTAMP}.log"
 : "${API_BASE_URL:=dev-api.onelens.cloud}"
 : "${TOKEN:=OWMyN2FhZjUtYzljMC00ZWI5LTg1MTgtMWU5NzM0NjllMDU2}"
 : "${PVC_ENABLED:=true}"
-
+echo $REGISTRATION_TOKEN
 # Export the variables so they are available in the environment
 export RELEASE_VERSION IMAGE_TAG API_BASE_URL TOKEN PVC_ENABLED
 
