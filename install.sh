@@ -1,35 +1,41 @@
 #!/bin/sh
-set -eux  
+set -eux
 
-
-RELEASE_VERSION="0.1.1-beta.2"
-IMAGE_TAG="v0.1.1-beta.2"
 TIMESTAMP=$(date +"%Y%m%d%H%M%S")
 LOG_FILE="/tmp/${ACCOUNT}_${CLUSTER_NAME}_${TIMESTAMP}.log"
-API_BASE_URL="dev-api.onelens.cloud"
-TOKEN="OWMyN2FhZjUtYzljMC00ZWI5LTg1MTgtMWU5NzM0NjllMDU2"
+
+# Set default values if variables are not set
+: "${RELEASE_VERSION:=0.1.1-beta.2}"
+: "${IMAGE_TAG:=v0.1.1-beta.2}"
+: "${API_BASE_URL:=dev-api.onelens.cloud}"
+: "${TOKEN:=OWMyN2FhZjUtYzljMC00ZWI5LTg1MTgtMWU5NzM0NjllMDU2}"
+: "${PVC_ENABLED:=true}"
+
+# Export the variables so they are available in the environment
+export RELEASE_VERSION IMAGE_TAG API_BASE_URL TOKEN PVC_ENABLED
 
 # Capture all script output
-exec > >(tee -a "$LOG_FILE") 2>&1
+exec > >(tee "$LOG_FILE") 2>&1
 
 # Function to send logs before exiting
 send_logs() {
     echo "Sending logs to API..."
-    curl -X POST "$API_BASE_URL" \
-    -H "X-Secret-Token: $TOKEN" \
-    -H "Content-Type: application/json" \
-    -d '{
-        "registration_id": "$registration_id",
-        "cluster_token": "$cluster_token",
-        "status": "'"$(cat "$LOG_FILE")"'"
-    }'
+    sleep 2
+    curl -X POST "https://$API_BASE_URL/v1/kubernetes/registration" \
+        -H "X-Secret-Token: $TOKEN" \
+        -H "Content-Type: application/json" \
+        -d '{
+            "registration_id": "$registration_id",
+            "cluster_token": "$cluster_token",
+            "status": "$(cat "$LOG_FILE")"
+        }'
 }
 
 # Trap EXIT and ERR signals to send logs before exiting
-trap send_logs EXIT ERR
+trap 'send_logs; exit 1' ERR
 
 response=$(curl -X POST \
-  http://$API_BASE_URL/v1/kubernetes/registration \
+  https://$API_BASE_URL/v1/kubernetes/registration \
   -H "X-Secret-Token: $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -40,17 +46,15 @@ response=$(curl -X POST \
     "agent_version": "$RELEASE_VERSION"
   }')
 
-# Extract registration_id and cluster_token using jq
 registration_id=$(echo $response | jq -r '.data.registration_id')
 cluster_token=$(echo $response | jq -r '.data.cluster_token')
-
 
 # Step 0: Checking prerequisites
 echo "Step 0: Checking prerequisites..."
 
 # Define versions
-HELM_VERSION="v3.13.2"  
-KUBECTL_VERSION="v1.28.2"  
+HELM_VERSION="v3.13.2"
+KUBECTL_VERSION="v1.28.2"
 
 # Detect architecture
 ARCH=$(uname -m)
@@ -61,7 +65,7 @@ elif [[ "$ARCH" == "aarch64" || "$ARCH" == "arm64" ]]; then
     ARCH_TYPE="arm64"
 else
     echo "Unsupported architecture: $ARCH"
-    exit 1
+    false
 fi
 
 echo "Detected architecture: $ARCH_TYPE"
@@ -73,7 +77,6 @@ curl -fsSL "https://get.helm.sh/helm-${HELM_VERSION}-linux-${ARCH_TYPE}.tar.gz" 
     mv linux-${ARCH_TYPE}/helm /usr/local/bin/helm && \
     rm -rf linux-${ARCH_TYPE} helm.tar.gz
 
-# Verify Helm installation
 helm version
 
 # Install kubectl
@@ -82,13 +85,11 @@ curl -LO "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/${ARCH_TYPE}/ku
     chmod +x kubectl && \
     mv kubectl /usr/local/bin/kubectl
 
-# Verify kubectl installation
 kubectl version --client
 
-# Check for kubectl
 if ! command -v kubectl &> /dev/null; then
     echo "Error: kubectl not found. Please install kubectl."
-    exit 1
+    false
 fi
 
 # Namespace validation
@@ -113,6 +114,7 @@ check_ebs_driver() {
 
         if [ $count -eq 0 ]; then
             echo "EBS CSI driver is not installed. Installing..."
+            helm repo add aws-ebs-csi-driver https://kubernetes-sigs.github.io/aws-ebs-csi-driver
             helm install aws-ebs-csi-driver aws-ebs-csi-driver/aws-ebs-csi-driver --namespace kube-system --set controller.serviceAccount.create=true
         fi
 
@@ -120,7 +122,6 @@ check_ebs_driver() {
             echo "Retrying in 10 seconds..."
             sleep 10
         fi
-        
         count=$((count+1))
     done
 
@@ -130,20 +131,13 @@ check_ebs_driver() {
 
 check_ebs_driver 
 
-
-PVC_ENABLED=true
 echo "Persistent storage for Prometheus is ENABLED."
 
-
-# Fetch the total number of pods in the cluster
 TOTAL_PODS=$(kubectl get pods --all-namespaces --no-headers | wc -l)
-
 echo "Total number of pods in the cluster: $TOTAL_PODS"
 
-# Define common Helm repo commands
 helm repo add onelens https://manoj-astuto.github.io/onelens-charts && helm repo update
 
-# Determine resource allocation based on the number of pods
 if [ "$TOTAL_PODS" -lt 100 ]; then
     CPU_REQUEST="500m"
     MEMORY_REQUEST="2000Mi"
@@ -152,7 +146,6 @@ else
     MEMORY_REQUEST="4000Mi"
 fi
 
-# Deploy using Helm
 helm upgrade --install onelens-agent -n onelens-agent --create-namespace onelens/onelens-agent \
     --version "$RELEASE_VERSION" \
     --set onelens-agent.env.CLUSTER_NAME="$CLUSTER_NAME" \
@@ -164,17 +157,12 @@ helm upgrade --install onelens-agent -n onelens-agent --create-namespace onelens
     --set prometheus.server.persistentVolume.enabled="$PVC_ENABLED" \
     --set prometheus.server.resources.requests.cpu="$CPU_REQUEST" \
     --set prometheus.server.resources.requests.memory="$MEMORY_REQUEST" \
-    --wait || { 
-        echo "Error: Helm deployment failed."; 
-        exit 1; 
-    }
+    --wait || { echo "Error: Helm deployment failed."; false; }
 
-# Wait for pods to be ready
-echo "Waiting for pods to be ready..."
 kubectl wait --for=condition=ready pod -l app=onelens-agent -n onelens-agent --timeout=300s || {
     echo "Error: Pods failed to become ready."
     echo "Installation Failed."
-    exit 1
+    false
 }
 
 echo "Installation complete."
