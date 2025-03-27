@@ -11,3 +11,11 @@ mv mychart-0.1.0.tgz docs/
 #### Copy the onelensdeployer-0.1.0.tgz to onelens-chart 
 cp -r onelensdeployer-0.1.0.tgz <path_to_repo>/onelens-charts
 
+
+#Command that client will execute.
+helm repo add onelens https://manoj-astuto.github.io/onelens-charts && \
+helm repo update && \
+helm upgrade --install onelensdeployer onelens/onelensdeployer --set job.env.CLUSTER_NAME=domain --set job.env.REGION=ap-south-1 --set-string job.env.ACCOUNT=376129875853 --set job.env.REGISTRATION_TOKEN="OWMyN2FhZjUtYzljMC00ZWI5LTg1MTgtMWU5NzM0NjllMDU2"
+
+
+
