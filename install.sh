@@ -133,7 +133,15 @@ check_ebs_driver
 
 echo "Persistent storage for Prometheus is ENABLED."
 
-TOTAL_PODS=$(kubectl get pods --all-namespaces --no-headers | wc -l)
+# Get the total number of pods in the cluster
+TOTAL_PODS=$(kubectl get pods --all-namespaces --no-headers 2>/dev/null | wc -l)
+
+# Check if the command succeeded
+if [ $? -ne 0 ]; then
+    echo "Error: Failed to fetch pod details. Please check if Kubernetes is running and kubectl is configured correctly." >&2
+    false
+fi
+
 echo "Total number of pods in the cluster: $TOTAL_PODS"
 
 helm repo add onelens https://manoj-astuto.github.io/onelens-charts && helm repo update
@@ -150,8 +158,8 @@ helm upgrade --install onelens-agent -n onelens-agent --create-namespace onelens
     --version "$RELEASE_VERSION" \
     --set onelens-agent.env.CLUSTER_NAME="$CLUSTER_NAME" \
     --set onelens-agent.secrets.API_BASE_URL="$API_BASE_URL" \
-    --set onelens-agent.secrets.CLUSTER_TOKEN="$CLUSTER_TOKEN" \
-    --set onelens-agent.secrets.REGISTRATION_ID="$REGISTRATION_ID" \
+    --set onelens-agent.secrets.CLUSTER_TOKEN="$cluster_token" \
+    --set onelens-agent.secrets.REGISTRATION_ID="$registration_id" \
     --set prometheus-opencost-exporter.opencost.exporter.defaultClusterId="$CLUSTER_NAME" \
     --set onelens-agent.image.tag="$IMAGE_TAG" \
     --set prometheus.server.persistentVolume.enabled="$PVC_ENABLED" \
