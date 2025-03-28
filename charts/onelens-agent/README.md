@@ -10,7 +10,7 @@ The OneLens Agent chart serves as a comprehensive solution for deploying and man
 
 The chart follows semantic versioning (MAJOR.MINOR.PATCH) with additional pre-release identifiers when needed (e.g., `-beta.3`). Version information is maintained in the `Chart.yaml` file.
 
-## Working with the Helm Chart
+## Updating the Helm Chart
 
 ### Prerequisites
 
@@ -21,7 +21,7 @@ The chart follows semantic versioning (MAJOR.MINOR.PATCH) with additional pre-re
 ### Dependencies
 
 This chart includes the following dependencies:
-- OneLens Agent Base (from ECR)
+- OneLens Agent Base (from private ECR)
 - Prometheus (from Prometheus Community Helm charts)
 - Prometheus OpenCost Exporter (from Prometheus Community Helm charts)
 
@@ -54,47 +54,53 @@ helm package . -d packages/
 > **Note**: This will create a `.tgz` file in the packages directory, e.g., `packages/onelens-agent-0.0.1-beta.5.tgz`.
 > After successfully pushing to ECR, you must delete the local package file.
 
-### Publishing to AWS ECR
-
-1. **Login to AWS Public ECR**:
-
-```bash
-aws ecr-public get-login-password --region us-east-1 | helm registry login --username AWS --password-stdin public.ecr.aws
-```
-
-2. **Push the chart to Public ECR**:
-
-```bash
-helm push packages/onelens-agent-<version>.tgz oci://public.ecr.aws/w7k6q5m9/helm-charts
-```
-
-Example:
-```bash
-helm push packages/onelens-agent-0.0.1-beta.4.tgz oci://public.ecr.aws/w7k6q5m9/helm-charts
-```
-
-### Pulling the Chart from ECR
-
-To download a chart from Public ECR:
-
-```bash
-helm pull oci://public.ecr.aws/w7k6q5m9/helm-charts/onelens-agent --version <version>
-```
-
-Example:
-```bash
-helm pull oci://public.ecr.aws/w7k6q5m9/helm-charts/onelens-agent --version 0.0.1-beta.4
-```
+### Publishing 
+TODO
 
 ## Configuration
 
 The chart can be configured through the `values.yaml` file. Key configuration sections include:
 
 - OneLens Agent settings
+  - Image configuration
+  - Service account settings
+  - Storage class configuration
+  - Resource limits
+  - CronJob settings
+  - Environment variables and secrets
 - Prometheus configuration
+  - Server settings
+  - Retention policies
+  - Scrape configurations
+  - Alert manager settings
 - OpenCost exporter settings
+  - Cloud provider configuration
+  - Resource limits
+  - Persistence settings
 
-See the `values.yaml` file for detailed configuration options.
+### CronJob Configuration
+
+The OneLens Agent runs as a CronJob with the following default settings:
+- Schedule: Once per hour (`0 * * * *`)
+- Concurrency Policy: Forbid (prevents concurrent executions)
+- History Limits: 3 successful jobs, 2 failed jobs
+- Restart Policy: Never
+- Health Check: Disabled by default
+
+### Storage Class Configuration
+
+The chart includes a storage class configuration with the following defaults:
+- Provisioner: ebs.csi.aws.com
+- Reclaim Policy: Retain
+- Volume Binding Mode: WaitForFirstConsumer
+- Volume Type: gp3
+- Volume Expansion: Disabled
+
+### Health Monitoring
+
+The agent includes health check endpoints for both Prometheus and OpenCost:
+- Prometheus Health: `http://onelens-agent-prometheus-server:80/-/healthy`
+- OpenCost Health: `http://onelens-agent-prometheus-opencost-exporter:9003/healthz`
 
 ## Troubleshooting
 
@@ -116,53 +122,81 @@ For OneLens Agent documentation, visit the OneLens documentation portal.
 ### Prerequisites
 
 - Helm 3.x installed
-- AWS CLI configured with appropriate permissions
-- Access to AWS ECR repository
 
 ### Deploying the Chart
 
-Login to AWS ECR:
+Add the charts
 ```bash
-aws ecr-public get-login-password --region us-east-1 | helm registry login --username AWS --password-stdin public.ecr.aws
+# Add the AWS ECR repository
+helm repo add onelens-agent <>
+
+# Update the Helm repositories
+helm repo update
 ```
 
 Upgrade the chart:
 ```bash
-helm upgrade --install onelens-agent -n onelens-agent --create-namespace oci://public.ecr.aws/w7k6q5m9/helm-charts/onelens-agent --version <chart-version> \
-    --set onelens-agent.env.CLUSTER_NAME="<cluster-name>" \
-    --set prometheus-opencost-exporter.opencost.exporter.defaultClusterId="<cluster-name>" \
-    --set onelens-agent.env.TENANT_NAME="<tenant-name>" \
-    --set onelens-agent.env.ACCOUNT_ID="<account-id>" \
-    --set onelens-agent.env.AWS_CLUSTER_REGION="<aws-cluster-region>" \
-    --set onelens-agent.env.S3_BUCKET_NAME="<s3-bucket-name>" \
-    --set onelens-agent.serviceAccount.annotations."eks\.amazonaws\.com/role-arn"="arn:aws:iam::<account-id>:role/<role-name>" \
-    --set onelens-agent.image.tag="<image-version>" 
+helm upgrade --install onelens-agent -n onelens-agent --create-namespace <chart> --version <chart-version> \
+    --set onelens-agent.image.tag="<image-version>" \
+    --set onelens-agent.secrets.API_BASE_URL="<api-base-url>" \
+    --set onelens-agent.secrets.CLUSTER_TOKEN="<cluster-token>" \
+    --set onelens-agent.secrets.REGISTRATION_ID="<registration-id>" \
+    --set onelens-agent.storageClass.enabled=true \
+    --set onelens-agent.storageClass.name="<storage-class-name>" \
 ```
 
 Sample run:
 ```bash
-helm upgrade --install onelens-agent -n onelens-agent --create-namespace oci://public.ecr.aws/w7k6q5m9/helm-charts/onelens-agent --version 0.0.1-beta.5 \
-    --set onelens-agent.env.CLUSTER_NAME="prod-ap-south-1-clickhouse-cluster" \
-    --set prometheus-opencost-exporter.opencost.exporter.defaultClusterId="prod-ap-south-1-clickhouse-cluster" \
-    --set onelens-agent.env.TENANT_NAME="dhan" \
-    --set onelens-agent.env.ACCOUNT_ID=\"471112871310\" \
-    --set onelens-agent.env.AWS_CLUSTER_REGION="ap-south-1" \
-    --set onelens-agent.env.S3_BUCKET_NAME="onelens-kubernetes-agent" \
-    --set onelens-agent.serviceAccount.annotations."eks\.amazonaws\.com/role-arn"="arn:aws:iam::609916866699:role/onelens-kubernetes-agent-role-dhan" \
-    --set onelens-agent.image.repository="public.ecr.aws/w7k6q5m9/onelens-agent" \
-    --set onelens-agent.image.tag="v0.0.1-beta.5"
+helm upgrade --install onelens-agent -n onelens-agent --create-namespace <chart> --version 0.1.1-beta.2 \
+    --set onelens-agent.image.tag="v0.1.1-beta.2" \
+    --set onelens-agent.secrets.API_BASE_URL="https://dev-api.onelens.cloud" \
+    --set onelens-agent.secrets.CLUSTER_TOKEN="plain-cluster-token" \
+    --set onelens-agent.secrets.REGISTRATION_ID="plain-registration-id" \
+    --set onelens-agent.storageClass.enabled=true \
+    --set onelens-agent.storageClass.name="onelens-sc" \
 ```
 
-### Troubleshooting
+### Configuration
 
-```bash
-Error: 1 error occurred:
-        * ConfigMap in version "v1" cannot be handled as a ConfigMap: json: cannot unmarshal number into Go struct field ConfigMap.data of type string
-```
+The chart can be configured through the `values.yaml` file. Key configuration sections include:
 
-This error occurs because the `ACCOUNT_ID` is being set as a number instead of a string.
+- OneLens Agent settings
+  - Image configuration
+  - Service account settings
+  - Storage class configuration
+  - Resource limits
+  - CronJob settings
+  - Environment variables and secrets
+- Prometheus configuration
+  - Server settings
+  - Retention policies
+  - Scrape configurations
+  - Alert manager settings
+- OpenCost exporter settings
+  - Cloud provider configuration
+  - Resource limits
+  - Persistence settings
 
-To fix this, set the `ACCOUNT_ID` as a string:
-```bash
---set onelens-agent.env.ACCOUNT_ID=\"471112871310\"
-```
+### CronJob Configuration
+
+The OneLens Agent runs as a CronJob with the following default settings:
+- Schedule: Once per hour (`0 * * * *`)
+- Concurrency Policy: Forbid (prevents concurrent executions)
+- History Limits: 3 successful jobs, 2 failed jobs
+- Restart Policy: Never
+- Health Check: Disabled by default
+
+### Storage Class Configuration
+
+The chart includes a storage class configuration with the following defaults:
+- Provisioner: ebs.csi.aws.com
+- Reclaim Policy: Retain
+- Volume Binding Mode: WaitForFirstConsumer
+- Volume Type: gp3
+- Volume Expansion: Disabled
+
+### Health Monitoring
+
+The agent includes health check endpoints for both Prometheus and OpenCost:
+- Prometheus Health: `http://onelens-agent-prometheus-server:80/-/healthy`
+- OpenCost Health: `http://onelens-agent-prometheus-opencost-exporter:9003/healthz`
