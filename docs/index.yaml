@@ -1,23 +1,49 @@
 apiVersion: v1
 entries:
+  onelens-agent:
+  - apiVersion: v2
+    appVersion: 0.1.1-beta.2
+    created: "2025-03-31T10:55:32.473818+05:30"
+    dependencies:
+    - alias: onelens-agent
+      condition: onelens-agent.enabled
+      name: onelens-agent-base
+      repository: oci://609916866699.dkr.ecr.ap-south-1.amazonaws.com/helm-charts
+      version: 0.1.1-beta.2
+    - condition: prometheus.enabled
+      name: prometheus
+      repository: https://prometheus-community.github.io/helm-charts
+      version: 27.3.0
+    - condition: prometheus-opencost-exporter.enabled
+      name: prometheus-opencost-exporter
+      repository: https://prometheus-community.github.io/helm-charts
+      version: 0.1.1
+    description: Helm chart for the OneLens Agent
+    digest: e4ec64b667e04cb42e9551f6b5dc4b117f04ab950d5bfd9d46b3425953d52105
+    maintainers:
+    - email: support@onelens.ai
+      name: OneLens
+    name: onelens-agent
+    type: application
+    urls:
+    - https://astuto-ai.github.io/onelens-installation-scripts/onelens-agent-0.1.1-beta.2.tgz
+    version: 0.1.1-beta.2
   onelensdeployer:
   - apiVersion: v2
-    created: "2025-03-23T16:28:56.973438+05:30"
+    created: "2025-03-31T10:55:32.474206+05:30"
     description: A Helm chart for deploying Kubernetes Jobs and CronJobs
-    digest: 531a539c637a9cc7b2ba006d957f0f8025e866068d50209cd277e42762fd1d83
+    digest: 3bda2e457558b9bb2e0d813460bada54fba8b9c85042e21e464c08620deb438f
     keywords:
     - job
     - cronjob
     - kubernetes
     - helm
     maintainers:
-    - email: your.email@example.com
-      name: Your Name
+    - email: astuto@astuto.ai
+      name: astuto
     name: onelensdeployer
-    sources:
-    - https://github.com/your-repo/job-cronjob-chart
     type: application
     urls:
-    - https://manoj-astuto.github.io/onelens-charts/onelensdeployer-0.1.0.tgz
+    - https://astuto-ai.github.io/onelens-installation-scripts/onelensdeployer-0.1.0.tgz
     version: 0.1.0
-generated: "2025-03-23T16:28:56.973153+05:30"
+generated: "2025-03-31T10:55:32.46819+05:30"

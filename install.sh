@@ -1,41 +1,43 @@
-#!/bin/sh
-set -eux
+#!/bin/bash
+set -ex
+trap -p
 
+# Phase 1: Logging Setup
 TIMESTAMP=$(date +"%Y%m%d%H%M%S")
-LOG_FILE="/tmp/${ACCOUNT}_${CLUSTER_NAME}_${TIMESTAMP}.log"
-
-# Set default values if variables are not set
-: "${RELEASE_VERSION:=0.1.1-beta.2}"
-: "${IMAGE_TAG:=v0.1.1-beta.2}"
-: "${API_BASE_URL:=dev-api.onelens.cloud}"
-: "${TOKEN:=OWMyN2FhZjUtYzljMC00ZWI5LTg1MTgtMWU5NzM0NjllMDU2}"
-: "${PVC_ENABLED:=true}"
-echo $REGISTRATION_TOKEN
-# Export the variables so they are available in the environment
-export RELEASE_VERSION IMAGE_TAG API_BASE_URL TOKEN PVC_ENABLED
-
+LOG_FILE="/tmp/${TIMESTAMP}.log"
+touch "$LOG_FILE"
 # Capture all script output
 exec > >(tee "$LOG_FILE") 2>&1
 
-# Function to send logs before exiting
 send_logs() {
     echo "Sending logs to API..."
-    sleep 2
-    curl -X POST "https://$API_BASE_URL/v1/kubernetes/registration" \
-        -H "X-Secret-Token: $TOKEN" \
-        -H "Content-Type: application/json" \
-        -d "{
-            \"registration_id\": \"$registration_id\",
-            \"cluster_token\": \"$cluster_token\",
-            \"status\": \"$(cat "$LOG_FILE" | jq -Rs .)\"
-        }"
+    echo "***********************************************************************************************"
+    sleep 0.1
+    cat "$LOG_FILE"
 }
 
-# Trap EXIT and ERR signals to send logs before exiting
-trap 'send_logs; exit 1' ERR
+# Ensure send_logs runs before exit
+trap 'send_logs; exit 1' ERR EXIT
 
+# Phase 2: Environment Variable Setup
+: "${RELEASE_VERSION:=0.1.1-beta.2}"
+: "${IMAGE_TAG:=latest}"
+: "${API_BASE_URL:=https://dev-api.onelens.cloud}"
+: "${TOKEN:=OWMyN2FhZjUtYzljMC00ZWI5LTg1MTgtMWU5NzM0NjllMDU2}"
+: "${PVC_ENABLED:=true}"
+
+# Export the variables so they are available in the environment
+export RELEASE_VERSION IMAGE_TAG API_BASE_URL TOKEN PVC_ENABLED
+if [ -z "${REGISTRATION_TOKEN:-}" ]; then
+    echo "Error: REGISTRATION_TOKEN is not set"
+    exit 1
+else
+    echo "REGISTRATION_TOKEN is set"
+fi
+
+# Phase 3: API Registration
 response=$(curl -X POST \
-  "https://$API_BASE_URL/v1/kubernetes/registration" \
+  "$API_BASE_URL/v1/kubernetes/registration" \
   -H "X-Secret-Token: $TOKEN" \
   -H "Content-Type: application/json" \
   -d "{
@@ -46,10 +48,18 @@ response=$(curl -X POST \
     \"agent_version\": \"$RELEASE_VERSION\"
   }")
 
-registration_id=$(echo $response | jq -r '.data.registration_id')
-cluster_token=$(echo $response | jq -r '.data.cluster_token')
+REGISTRATION_ID=$(echo $response | jq -r '.data.registration_id')
+CLUSTER_TOKEN=$(echo $response | jq -r '.data.cluster_token')
 
-# Step 0: Checking prerequisites
+if [[ -n "$REGISTRATION_ID" && "$REGISTRATION_ID" != "null" && -n "$CLUSTER_TOKEN" && "$CLUSTER_TOKEN" != "null" ]]; then
+    echo "Both REGISTRATION_ID and CLUSTER_TOKEN have values."
+else
+    echo "One or both of REGISTRATION_ID and CLUSTER_TOKEN are empty or null."
+    exit 1
+fi
+sleep 2
+
+# Phase 4: Prerequisite Checks
 echo "Step 0: Checking prerequisites..."
 
 # Define versions
@@ -65,12 +75,12 @@ elif [[ "$ARCH" == "aarch64" || "$ARCH" == "arm64" ]]; then
     ARCH_TYPE="arm64"
 else
     echo "Unsupported architecture: $ARCH"
-    false
+    exit 1
 fi
 
 echo "Detected architecture: $ARCH_TYPE"
 
-# Install Helm
+# Phase 5: Install Helm
 echo "Installing Helm for $ARCH_TYPE..."
 curl -fsSL "https://get.helm.sh/helm-${HELM_VERSION}-linux-${ARCH_TYPE}.tar.gz" -o helm.tar.gz && \
     tar -xzvf helm.tar.gz && \
@@ -79,7 +89,7 @@ curl -fsSL "https://get.helm.sh/helm-${HELM_VERSION}-linux-${ARCH_TYPE}.tar.gz" 
 
 helm version
 
-# Install kubectl
+# Phase 6: Install kubectl
 echo "Installing kubectl for $ARCH_TYPE..."
 curl -LO "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/${ARCH_TYPE}/kubectl" && \
     chmod +x kubectl && \
@@ -89,17 +99,18 @@ kubectl version --client
 
 if ! command -v kubectl &> /dev/null; then
     echo "Error: kubectl not found. Please install kubectl."
-    false
+    exit 1
 fi
 
-# Namespace validation
+# Phase 7: Namespace Validation
 if kubectl get namespace onelens-agent &> /dev/null; then
     echo "Warning: Namespace 'onelens-agent' already exists."
 else
     echo "Creating namespace 'onelens-agent'..."
-    kubectl create namespace onelens-agent
+    kubectl create namespace onelens-agent || { echo "Error: Failed to create namespace 'onelens-agent'."; exit 1; }
 fi
 
+# Phase 8: EBS CSI Driver Check and Installation
 check_ebs_driver() {
     local retries=1
     local count=0
@@ -133,13 +144,12 @@ check_ebs_driver
 
 echo "Persistent storage for Prometheus is ENABLED."
 
-# Get the total number of pods in the cluster
+# Phase 9: Cluster Pod Count and Resource Allocation
 TOTAL_PODS=$(kubectl get pods --all-namespaces --no-headers 2>/dev/null | wc -l)
 
-# Check if the command succeeded
 if [ $? -ne 0 ]; then
     echo "Error: Failed to fetch pod details. Please check if Kubernetes is running and kubectl is configured correctly." >&2
-    false
+    exit 1
 fi
 
 echo "Total number of pods in the cluster: $TOTAL_PODS"
@@ -154,32 +164,63 @@ else
     MEMORY_REQUEST="4000Mi"
 fi
 
+# Phase 10: Helm Deployment
+check_var() {
+    if [ -z "${!1:-}" ]; then
+        echo "Error: $1 is not set"
+        exit 1
+    fi
+}
+
+check_var CLUSTER_TOKEN
+check_var REGISTRATION_ID
+
+# # Check if an older version of onelens-agent is already running
+# if helm list -n onelens-agent | grep -q "onelens-agent"; then
+#     echo "An older version of onelens-agent is already running."
+#     CURRENT_VERSION=$(helm get values onelens-agent -n onelens-agent -o json | jq '.["onelens-agent"].image.tag // "unknown"')
+#     echo "Current version of onelens-agent: $CURRENT_VERSION"
+
+#     if [ "$CURRENT_VERSION" != "$IMAGE_TAG" ]; then
+#         echo "Patching onelens-agent to version $IMAGE_TAG..."
+#     else
+#         echo "onelens-agent is already at the desired version ($IMAGE_TAG)."
+#         exit 1
+#     fi
+# else
+#     echo "No existing onelens-agent release found. Proceeding with installation."
+# fi
+
 helm upgrade --install onelens-agent -n onelens-agent --create-namespace onelens/onelens-agent \
     --version "$RELEASE_VERSION" \
     --set onelens-agent.env.CLUSTER_NAME="$CLUSTER_NAME" \
     --set onelens-agent.secrets.API_BASE_URL="$API_BASE_URL" \
-    --set onelens-agent.secrets.CLUSTER_TOKEN="$cluster_token" \
-    --set onelens-agent.secrets.REGISTRATION_ID="$registration_id" \
+    --set onelens-agent.secrets.CLUSTER_TOKEN="$CLUSTER_TOKEN" \
+    --set onelens-agent.secrets.REGISTRATION_ID="$REGISTRATION_ID" \
     --set prometheus-opencost-exporter.opencost.exporter.defaultClusterId="$CLUSTER_NAME" \
     --set onelens-agent.image.tag="$IMAGE_TAG" \
     --set prometheus.server.persistentVolume.enabled="$PVC_ENABLED" \
     --set prometheus.server.resources.requests.cpu="$CPU_REQUEST" \
     --set prometheus.server.resources.requests.memory="$MEMORY_REQUEST" \
-    --wait || { echo "Error: Helm deployment failed."; false; }
+    --wait || { echo "Error: Helm deployment failed."; exit 1; }
 
-kubectl wait --for=condition=ready pod -l app=onelens-agent -n onelens-agent --timeout=300s || {
+kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=prometheus-opencost-exporter -n onelens-agent --timeout=300s || {
     echo "Error: Pods failed to become ready."
     echo "Installation Failed."
     false
 }
 
+# Phase 11: Finalization
 echo "Installation complete."
-curl -X PUT "https://$API_BASE_URL/v1/kubernetes/registration" \
+
+echo " Printing $REGISTRATION_ID"
+echo "Printing $CLUSTER_TOKEN"
+curl -X PUT "$API_BASE_URL/v1/kubernetes/registration" \
     -H "X-Secret-Token: $TOKEN" \
     -H "Content-Type: application/json" \
     -d "{
-        \"registration_id\": \"$registration_id\",
-        \"cluster_token\": \"$cluster_token\",
+        \"registration_id\": \"$REGISTRATION_ID\",
+        \"cluster_token\": \"$CLUSTER_TOKEN\",
         \"status\": \"CONNECTED\"
     }"
 

@@ -1,4 +1,4 @@
-name: Publish Helm Charts
+name: Publish Onelensdeployer Helm Charts
 
 on:
   push:
@@ -23,16 +23,16 @@ jobs:
       - name: Package Helm Chart
         run: |
           mkdir -p docs
-          helm package charts/* -d docs/
+          helm package charts/onelensdeployer -d docs/
 
       - name: Update Helm Repo Index
         run: |
-          helm repo index docs --url https://your-github-username.github.io/helm-charts/
+          helm repo index docs --url https://astuto-ai.github.io/onelens-installation-scripts/
       
       - name: Commit and Push Changes
         run: |
-          git config --global user.name "github-actions"
-          git config --global user.email "github-actions@github.com"
+          git config --global user.name "manoj-astuto"
+          git config --global user.email "manoj.v@astuto.ai"
           git add docs/
           git commit -m "Updated Helm charts [CI]"
           git push origin main
