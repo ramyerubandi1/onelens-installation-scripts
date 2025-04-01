@@ -1,20 +1,15 @@
 apiVersion: v2
-name: onelensdeployer
 description: A Helm chart for deploying Kubernetes Jobs and CronJobs
-version: 0.1.1-beta.2
-appVersion: 0.1.1-beta.2
-type: application
-
-maintainers:
-  - name: astuto
-    email: astuto@astuto.ai
-
 keywords:
-  - job
-  - cronjob
-  - kubernetes
-  - helm
-
-templates:
-  - name: _helpers.tpl
-    path: templates/_helpers.tpl
+- job
+- cronjob
+- kubernetes
+- helm
+maintainers:
+- email: your.email@example.com
+  name: Your Name
+name: onelensdeployer
+sources:
+- https://github.com/your-repo/job-cronjob-chart
+type: application
+version: 0.1.0
