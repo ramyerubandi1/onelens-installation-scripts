@@ -1,26 +1,37 @@
 job:
   enabled: true
-  name: my-job
+  name: helmdeployerjob
   image: public.ecr.aws/w7k6q5m9/onelens-deployer
   imagePullPolicy: Always
   restartPolicy: OnFailure
   env: {}
 
 cronjob:
-  enabled: false
-  name: my-cronjob
-  schedule: "*/5 * * * *"
-  image: busybox
-  command: ["/bin/sh", "-c", "echo Hello from CronJob"]
-  restartPolicy: OnFailure
+  enabled: true
+  name: helmdeployercronjob
+  schedule: "* * * * *"
+  image: public.ecr.aws/w7k6q5m9/onelens-deployer
+  restartPolicy: Never
+  env: {}
+  concurrencyPolicy: "Forbid"  # Prevent concurrent job executions
+  successfulJobsHistoryLimit: 3 # Number of successful jobs to keep
+  failedJobsHistoryLimit: 2 # Number of failed jobs to keep
+  suspend: false # Suspend the job
+  healthCheck: false  # Set to true to enable health check for cronjob pod
+
+  # Tolerations allow the agent to be scheduled on nodes with matching taints
+  tolerations: []
+  # - key: "key"
+  #   operator: "Equal"
+  #   value: "value"
+  #   effect: "NoSchedule"
+  nodeSelector: {}
+    # kubernetes.io/os: linux
 
 serviceAccount:
   enabled: true
   name: onelensdeployer-sa
 namespace: default
 
-
 clusterRoleBinding:
   name: helm-deployer-binding
-
-
