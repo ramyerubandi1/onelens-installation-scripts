@@ -7,7 +7,7 @@ job:
   env: {}
 
 cronjob:
-  enabled: true
+  enabled: false
   name: helmdeployercronjob
   schedule: "* * * * *"
   image: public.ecr.aws/w7k6q5m9/onelens-deployer
