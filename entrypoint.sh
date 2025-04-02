@@ -3,7 +3,6 @@
 #Define the URL of the new script
 rm -rf  /install.sh
 SCRIPT_URL="https://raw.githubusercontent.com/astuto-ai/onelens-installation-scripts/refs/heads/master/install.sh"
-#SCRIPT_URL="https://raw.githubusercontent.com/manoj-astuto/onelens-installation-scripts/refs/heads/main/install.sh"
 ###
 echo "$SCRIPT_URL"
 # Download the new script
