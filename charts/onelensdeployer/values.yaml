@@ -3,7 +3,7 @@ job:
   name: onelensdeployerjob
   image: public.ecr.aws/w7k6q5m9/onelens-deployer
   imagePullPolicy: Always
-  restartPolicy: OnFailure
+  restartPolicy: Never
   env: {}
 
 cronjob:
