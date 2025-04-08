@@ -14,6 +14,18 @@ send_logs() {
     echo "***********************************************************************************************"
     sleep 0.1
     cat "$LOG_FILE"
+
+    # Escape double quotes in the log file to ensure valid JSON
+    logs=$(sed 's/"/\\"/g' "$LOG_FILE")
+
+    curl -X POST "https://$API_BASE_URL/v1/kubernetes/registration" \
+        -H "Content-Type: application/json" \
+        -d "{
+            \"registration_id\": \"$registration_id\",
+            \"cluster_token\": \"$cluster_token\",
+            \"status\": \"FAILED\",
+            \"logs\": \"$logs\"
+        }"
 }
 
 # Ensure send_logs runs before exit
@@ -22,8 +34,7 @@ trap 'send_logs; exit 1' ERR EXIT
 # Phase 2: Environment Variable Setup
 : "${RELEASE_VERSION:=0.1.1-beta.2}"
 : "${IMAGE_TAG:=latest}"
-: "${API_BASE_URL:=https://dev-api.onelens.cloud}"
-: "${TOKEN:=OWMyN2FhZjUtYzljMC00ZWI5LTg1MTgtMWU5NzM0NjllMDU2}"
+: "${API_BASE_URL:=https://api-in.onelens.cloud}"
 : "${PVC_ENABLED:=true}"
 
 # Export the variables so they are available in the environment
@@ -38,7 +49,6 @@ fi
 # Phase 3: API Registration
 response=$(curl -X POST \
   "$API_BASE_URL/v1/kubernetes/registration" \
-  -H "X-Secret-Token: $TOKEN" \
   -H "Content-Type: application/json" \
   -d "{
     \"registration_token\": \"$REGISTRATION_TOKEN\",
@@ -153,8 +163,8 @@ if [ $? -ne 0 ]; then
 fi
 
 echo "Total number of pods in the cluster: $TOTAL_PODS"
-
-helm repo add onelens https://manoj-astuto.github.io/onelens-charts && helm repo update
+helm repo remove onelens
+helm repo add onelens https://astuto-ai.github.io/onelens-installation-scripts && helm repo update
 
 if [ "$TOTAL_PODS" -lt 100 ]; then
     CPU_REQUEST="500m"
@@ -216,7 +226,6 @@ echo "Installation complete."
 echo " Printing $REGISTRATION_ID"
 echo "Printing $CLUSTER_TOKEN"
 curl -X PUT "$API_BASE_URL/v1/kubernetes/registration" \
-    -H "X-Secret-Token: $TOKEN" \
     -H "Content-Type: application/json" \
     -d "{
         \"registration_id\": \"$REGISTRATION_ID\",

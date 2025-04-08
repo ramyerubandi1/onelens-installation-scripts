@@ -1,6 +1,6 @@
 job:
   enabled: true
-  name: helmdeployerjob
+  name: onelensdeployerjob
   image: public.ecr.aws/w7k6q5m9/onelens-deployer
   imagePullPolicy: Always
   restartPolicy: OnFailure
@@ -8,7 +8,7 @@ job:
 
 cronjob:
   enabled: false
-  name: helmdeployercronjob
+  name: onelensdeployercronjob
   schedule: "* * * * *"
   image: public.ecr.aws/w7k6q5m9/onelens-deployer
   restartPolicy: Never
