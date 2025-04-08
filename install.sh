@@ -163,7 +163,7 @@ if [ $? -ne 0 ]; then
 fi
 
 echo "Total number of pods in the cluster: $TOTAL_PODS"
-helm repo remove onelens
+
 helm repo add onelens https://astuto-ai.github.io/onelens-installation-scripts && helm repo update
 
 if [ "$TOTAL_PODS" -lt 100 ]; then
