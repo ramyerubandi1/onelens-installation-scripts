@@ -18,7 +18,7 @@ send_logs() {
     # Escape double quotes in the log file to ensure valid JSON
     logs=$(sed 's/"/\\"/g' "$LOG_FILE")
 
-    curl -X POST "https://$API_BASE_URL/v1/kubernetes/registration" \
+    curl -X POST "$API_BASE_URL/v1/kubernetes/registration" \
         -H "Content-Type: application/json" \
         -d "{
             \"registration_id\": \"$registration_id\",
@@ -204,6 +204,7 @@ check_var REGISTRATION_ID
 helm upgrade --install onelens-agent -n onelens-agent --create-namespace onelens/onelens-agent \
     --version "$RELEASE_VERSION" \
     --set onelens-agent.env.CLUSTER_NAME="$CLUSTER_NAME" \
+    --set-string onelens-agent.env.ACCOUNT_ID="$ACCOUNT"\
     --set onelens-agent.secrets.API_BASE_URL="$API_BASE_URL" \
     --set onelens-agent.secrets.CLUSTER_TOKEN="$CLUSTER_TOKEN" \
     --set onelens-agent.secrets.REGISTRATION_ID="$REGISTRATION_ID" \
