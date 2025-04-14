@@ -81,7 +81,7 @@ prometheus:
     retention: "30d"
     retentionSize: "9GB"
   serverFiles:
-    prometheus.yaml:
+    prometheus.yml:
       scrape_configs:
         - job_name: prometheus
           static_configs:
