@@ -124,8 +124,8 @@ prometheus:
     metricDenylist: []
     service: 
       annotations:
-      custom.metrics/scrape: "true"
-      prometheus.io/scrape: "false"
+        custom.metrics/scrape: "true"
+        prometheus.io/scrape: "false"
     metricLabelsAllowlist:
       - namespaces=[*]
       - pods=[*]
