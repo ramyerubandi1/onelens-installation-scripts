@@ -2,8 +2,35 @@ apiVersion: v1
 entries:
   onelens-agent:
   - apiVersion: v2
+    appVersion: 0.1.1-beta.3
+    created: "2025-04-14T12:19:17.664926+05:30"
+    dependencies:
+    - alias: onelens-agent
+      condition: onelens-agent.enabled
+      name: onelens-agent-base
+      repository: oci://609916866699.dkr.ecr.ap-south-1.amazonaws.com/helm-charts
+      version: 0.1.1-beta.2
+    - condition: prometheus.enabled
+      name: prometheus
+      repository: https://prometheus-community.github.io/helm-charts
+      version: 27.3.0
+    - condition: prometheus-opencost-exporter.enabled
+      name: prometheus-opencost-exporter
+      repository: https://prometheus-community.github.io/helm-charts
+      version: 0.1.1
+    description: Helm chart for the OneLens Agent
+    digest: 4a23fc77dd25c47a09c1b2db567af029ba7048e62176221d653e8914c9116c36
+    maintainers:
+    - email: support@onelens.ai
+      name: OneLens
+    name: onelens-agent
+    type: application
+    urls:
+    - https://astuto-ai.github.io/onelens-installation-scripts/onelens-agent-0.1.1-beta.3.tgz
+    version: 0.1.1-beta.3
+  - apiVersion: v2
     appVersion: 0.1.1-beta.2
-    created: "2025-04-08T17:06:34.491268+05:30"
+    created: "2025-04-14T12:19:17.658688+05:30"
     dependencies:
     - alias: onelens-agent
       condition: onelens-agent.enabled
@@ -30,7 +57,7 @@ entries:
     version: 0.1.1-beta.2
   onelensdeployer:
   - apiVersion: v2
-    created: "2025-04-08T17:06:34.491445+05:30"
+    created: "2025-04-14T12:19:17.665219+05:30"
     description: A Helm chart for deploying Kubernetes Jobs and CronJobs
     digest: b6028e746e6c2e30eb70eedbb8102629620e9d30a40163abaa5e4d1e7d05f7b1
     keywords:
@@ -48,4 +75,4 @@ entries:
     urls:
     - https://astuto-ai.github.io/onelens-installation-scripts/onelensdeployer-0.1.0.tgz
     version: 0.1.0
-generated: "2025-04-08T17:06:34.482547+05:30"
+generated: "2025-04-14T12:19:17.651391+05:30"
