@@ -200,20 +200,55 @@ check_var REGISTRATION_ID
 # else
 #     echo "No existing onelens-agent release found. Proceeding with installation."
 # fi
+export TOLERATION_KEY="${TOLERATION_KEY:=}"
+export TOLERATION_VALUE="${TOLERATION_VALUE:=}"
+export TOLERATION_OPERATOR="${TOLERATION_OPERATOR:=}"
+export TOLERATION_EFFECT="${TOLERATION_EFFECT:=}"
+export NODE_SELECTOR_KEY="${NODE_SELECTOR_KEY:=}"
+export NODE_SELECTOR_VALUE="${NODE_SELECTOR_VALUE:=}"
 
-helm upgrade --install onelens-agent -n onelens-agent --create-namespace onelens/onelens-agent \
-    --version "$RELEASE_VERSION" \
-    --set onelens-agent.env.CLUSTER_NAME="$CLUSTER_NAME" \
-    --set-string onelens-agent.env.ACCOUNT_ID="$ACCOUNT"\
-    --set onelens-agent.secrets.API_BASE_URL="$API_BASE_URL" \
-    --set onelens-agent.secrets.CLUSTER_TOKEN="$CLUSTER_TOKEN" \
-    --set onelens-agent.secrets.REGISTRATION_ID="$REGISTRATION_ID" \
-    --set prometheus-opencost-exporter.opencost.exporter.defaultClusterId="$CLUSTER_NAME" \
-    --set onelens-agent.image.tag="$IMAGE_TAG" \
-    --set prometheus.server.persistentVolume.enabled="$PVC_ENABLED" \
-    --set prometheus.server.resources.requests.cpu="$CPU_REQUEST" \
-    --set prometheus.server.resources.requests.memory="$MEMORY_REQUEST" \
-    --wait || { echo "Error: Helm deployment failed."; exit 1; }
+CMD="helm upgrade --install onelens-agent -n onelens-agent --create-namespace onelens/onelens-agent \
+    --version \"\${RELEASE_VERSION:=0.1.1-beta.3}\" \
+    --set onelens-agent.env.CLUSTER_NAME=\"$CLUSTER_NAME\" \
+    --set-string onelens-agent.env.ACCOUNT_ID=\"$ACCOUNT\" \
+    --set onelens-agent.secrets.API_BASE_URL=\"$API_BASE_URL\" \
+    --set onelens-agent.secrets.CLUSTER_TOKEN=\"$CLUSTER_TOKEN\" \
+    --set onelens-agent.secrets.REGISTRATION_ID=\"$REGISTRATION_ID\" \
+    --set prometheus-opencost-exporter.opencost.exporter.defaultClusterId=\"$CLUSTER_NAME\" \
+    --set onelens-agent.image.tag=\"$IMAGE_TAG\" \
+    --set prometheus.server.persistentVolume.enabled=\"$PVC_ENABLED\" \
+    --set prometheus.server.resources.requests.cpu=\"$CPU_REQUEST\" \
+    --set prometheus.server.resources.requests.memory=\"$MEMORY_REQUEST\""
+# Append tolerations only if set
+if [[ -n "$TOLERATION_KEY" && -n "$TOLERATION_VALUE" && -n "$TOLERATION_OPERATOR" && -n "$TOLERATION_EFFECT" ]]; then
+  for path in \
+    prometheus-opencost-exporter.opencost \
+    prometheus.server \
+    onelens-agent.cronJob \
+    prometheus.prometheus-pushgateway \
+    prometheus.kube-state-metrics; do
+    CMD+=" \
+      --set $path.tolerations[0].key=\"$TOLERATION_KEY\" \
+      --set $path.tolerations[0].operator=\"$TOLERATION_OPERATOR\" \
+      --set $path.tolerations[0].value=\"$TOLERATION_VALUE\" \
+      --set $path.tolerations[0].effect=\"$TOLERATION_EFFECT\""
+  done
+fi
+if [[ -n "$NODE_SELECTOR_KEY" && -n "$NODE_SELECTOR_VALUE" ]]; then
+  for path in \
+    prometheus-opencost-exporter.opencost \
+    prometheus.server \
+    onelens-agent.cronJob \
+    prometheus.prometheus-pushgateway \
+    prometheus.kube-state-metrics; do
+    CMD+=" --set $path.nodeSelector.$NODE_SELECTOR_KEY=\"$NODE_SELECTOR_VALUE\""
+  done
+fi
+# Final execution
+CMD+=" --wait || { echo \"Error: Helm deployment failed.\"; exit 1; }"
+
+# Run it
+eval "$CMD"
 
 kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=prometheus-opencost-exporter -n onelens-agent --timeout=300s || {
     echo "Error: Pods failed to become ready."
