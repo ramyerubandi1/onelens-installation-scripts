@@ -268,5 +268,5 @@ curl -X PUT "$API_BASE_URL/v1/kubernetes/registration" \
         \"cluster_token\": \"$CLUSTER_TOKEN\",
         \"status\": \"CONNECTED\"
     }"
-
 echo "To verify deployment: kubectl get pods -n onelens-agent"
+helm uninstall onelensdeployer
