@@ -4,9 +4,9 @@ metadata:
   name: {{ .Values.clusterRoleBinding.name }}
 subjects:
   - kind: ServiceAccount
-    name: onelensdeployer-sa
-    namespace: {{ .Values.namespace }}
+    name: {{ .Values.serviceAccount.name }}
+    namespace: {{ .Release.Namespace }}
 roleRef:
   kind: ClusterRole
-  name: cluster-admin
+  name: {{ .Values.clusterRole.name }}
   apiGroup: rbac.authorization.k8s.io

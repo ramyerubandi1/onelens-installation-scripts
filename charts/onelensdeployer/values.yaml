@@ -14,8 +14,8 @@ cronjob:
   restartPolicy: Never
   env: {}
   concurrencyPolicy: "Forbid"  # Prevent concurrent job executions
-  successfulJobsHistoryLimit: 3 # Number of successful jobs to keep
-  failedJobsHistoryLimit: 2 # Number of failed jobs to keep
+  successfulJobsHistoryLimit: 1 # Number of successful jobs to keep
+  failedJobsHistoryLimit: 1 # Number of failed jobs to keep
   suspend: false # Suspend the job
   healthCheck: false  # Set to true to enable health check for cronjob pod
 
@@ -31,7 +31,10 @@ cronjob:
 serviceAccount:
   enabled: true
   name: onelensdeployer-sa
-namespace: default
+
+
+clusterRole:
+  name: onelensdeployer-clusterrole
 
 clusterRoleBinding:
-  name: helm-deployer-binding
+  name: onelensdeployer-clusterrolebinding
