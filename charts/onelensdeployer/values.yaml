@@ -35,109 +35,117 @@ serviceAccount:
 clusterRole:
   name: onelensdeployer-clusterrole
   rules:
-  # Core API resources
-  - apiGroups: [""]
-    resources: ["pods", "pods/log", "pods/exec", "pods/attach", "pods/status"]
-    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
-  
-  - apiGroups: [""]
-    resources: ["services", "endpoints", "nodes", "nodes/proxy", "nodes/status"]
-    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
-  
-  - apiGroups: [""]
-    resources: ["namespaces", "namespaces/status", "namespaces/finalize"]
-    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
-  
-  - apiGroups: [""]
-    resources: ["configmaps", "secrets", "serviceaccounts", "resourcequotas", "limitranges"]
-    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
-  
-  - apiGroups: [""]
-    resources: ["persistentvolumes", "persistentvolumeclaims", "events"]
-    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
-  
-  # Apps API resources
+  # Core API groups
+  - apiGroups: [""]  # "" indicates the core API group
+    resources: ["pods", "pods/log", "pods/exec", "pods/portforward", "pods/status", "pods/ephemeralcontainers", "pods/eviction", 
+                "services", "services/status", "services/proxy",
+                "endpoints", "endpoints/restricted", "persistentvolumeclaims", "persistentvolumeclaims/status",
+                "events", "limitranges", "namespaces", "namespaces/status", "namespaces/finalize",
+                "nodes", "nodes/status", "nodes/proxy", "nodes/spec",
+                "persistentvolumes", "persistentvolumes/status",
+                "replicationcontrollers", "replicationcontrollers/status", "replicationcontrollers/scale",
+                "resourcequotas", "resourcequotas/status",
+                "serviceaccounts", "serviceaccounts/token",
+                "secrets", "configmaps", "componentstatuses"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete", "deletecollection"]
+
+  # Apps API group
   - apiGroups: ["apps"]
-    resources: ["deployments", "daemonsets", "statefulsets", "replicasets"]
-    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
-  
-  # Batch API resources
+    resources: ["deployments", "deployments/status", "deployments/scale", "deployments/rollback",
+                "statefulsets", "statefulsets/status", "statefulsets/scale",
+                "replicasets", "replicasets/status", "replicasets/scale",
+                "daemonsets", "daemonsets/status",
+                "controllerrevisions"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete", "deletecollection"]
+
+  # Batch API group
   - apiGroups: ["batch"]
-    resources: ["jobs", "cronjobs"]
-    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
-  
-  # Networking API resources
-  - apiGroups: ["networking.k8s.io"]
-    resources: ["ingresses", "ingressclasses", "networkpolicies"]
-    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
-  
-  # Storage API resources
-  - apiGroups: ["storage.k8s.io"]
-    resources: ["storageclasses", "volumeattachments"]
-    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
-  
-  # RBAC API resources
-  - apiGroups: ["rbac.authorization.k8s.io"]
-    resources: ["clusterroles", "clusterrolebindings", "roles", "rolebindings"]
-    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
-  
-  # API Extensions
-  - apiGroups: ["apiextensions.k8s.io"]
-    resources: ["customresourcedefinitions"]
-    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
-  
+    resources: ["jobs", "jobs/status",
+                "cronjobs", "cronjobs/status"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete", "deletecollection"]
+
   # Autoscaling
   - apiGroups: ["autoscaling"]
-    resources: ["horizontalpodautoscalers"]
-    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
-  
+    resources: ["horizontalpodautoscalers", "horizontalpodautoscalers/status"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete", "deletecollection"]
+
+  # RBAC
+  - apiGroups: ["rbac.authorization.k8s.io"]
+    resources: ["roles", "rolebindings", "clusterroles", "clusterrolebindings"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete", "deletecollection"]
+
+  # Storage
+  - apiGroups: ["storage.k8s.io"]
+    resources: ["storageclasses", "volumeattachments", "volumeattachments/status", "csinodes", "csidrivers", "csistoragecapacities"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete", "deletecollection"]
+
+  # Networking
+  - apiGroups: ["networking.k8s.io"]
+    resources: ["networkpolicies", "ingresses", "ingresses/status", "ingressclasses"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete", "deletecollection"]
+
   # Policy
   - apiGroups: ["policy"]
-    resources: ["poddisruptionbudgets", "podsecuritypolicies"]
-    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
-  
+    resources: ["poddisruptionbudgets", "poddisruptionbudgets/status", "podsecuritypolicies"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete", "deletecollection"]
+
   # Certificates
   - apiGroups: ["certificates.k8s.io"]
     resources: ["certificatesigningrequests", "certificatesigningrequests/approval", "certificatesigningrequests/status"]
-    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
-  
-  # Coordination (for leases)
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete", "deletecollection"]
+
+  # Extensions (some are deprecated but still used)
+  - apiGroups: ["extensions"]
+    resources: ["ingresses", "ingresses/status", "networkpolicies"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete", "deletecollection"]
+
+  # API extensions
+  - apiGroups: ["apiextensions.k8s.io"]
+    resources: ["customresourcedefinitions", "customresourcedefinitions/status"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete", "deletecollection"]
+
+  # Coordination
   - apiGroups: ["coordination.k8s.io"]
     resources: ["leases"]
-    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
-  
-  # Discovery and metrics
-  - apiGroups: ["metrics.k8s.io"]
-    resources: ["pods", "nodes"]
-    verbs: ["get", "list", "watch"]
-    
-  # Authorization
-  - apiGroups: ["authorization.k8s.io"]
-    resources: ["subjectaccessreviews", "selfsubjectaccessreviews", "selfsubjectrulesreviews"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete", "deletecollection"]
+
+  # Scheduling
+  - apiGroups: ["scheduling.k8s.io"]
+    resources: ["priorityclasses"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete", "deletecollection"]
+
+  # Node
+  - apiGroups: ["node.k8s.io"]
+    resources: ["runtimeclasses"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete", "deletecollection"]
+
+  # Authentication
+  - apiGroups: ["authentication.k8s.io"]
+    resources: ["tokenreviews"]
     verbs: ["create"]
 
-  # Extensions API group (deprecated but included for backward compatibility)
-  - apiGroups: ["extensions"]
-    resources: ["daemonsets", "deployments"]
-    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  # Authorization
+  - apiGroups: ["authorization.k8s.io"]
+    resources: ["subjectaccessreviews", "selfsubjectaccessreviews", "selfsubjectrulesreviews", "localsubjectaccessreviews"]
+    verbs: ["create"]
 
-  - apiGroups: [""]
-    resources: ["nodes", "pods", "services", "namespaces"]
-    verbs: ["get", "list", "watch"]
+  # Admission
+  - apiGroups: ["admissionregistration.k8s.io"]
+    resources: ["mutatingwebhookconfigurations", "validatingwebhookconfigurations"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete", "deletecollection"]
+
+  # Events
+  - apiGroups: ["events.k8s.io"]
+    resources: ["events"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete", "deletecollection"]
+
+  # Discovery and metrics
+  - apiGroups: ["discovery.k8s.io"]
+    resources: ["endpointslices"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete", "deletecollection"]
+
   - apiGroups: ["metrics.k8s.io"]
-    resources: ["nodes", "pods"]
-    verbs: ["get", "list", "watch"]
-  - apiGroups: [""]
-    resources: ["resourcequotas"]
-    verbs: ["get", "list", "watch"]
-  - apiGroups: [""]
-    resources: ["nodes", "pods", "services", "namespaces", "persistentvolumes", "persistentvolumeclaims", "configmaps", "replicationcontrollers"]
-    verbs: ["get", "list", "watch"]
-  - apiGroups: ["apps"]
-    resources: ["deployments", "statefulsets", "daemonsets", "replicasets"]
-    verbs: ["get", "list", "watch"]
-  - apiGroups: ["batch"]
-    resources: ["jobs", "cronjobs"]
+    resources: ["pods", "nodes"]
     verbs: ["get", "list", "watch"]
 
 clusterRoleBinding:
