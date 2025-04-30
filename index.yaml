@@ -3,7 +3,7 @@ entries:
   onelens-agent:
   - apiVersion: v2
     appVersion: 0.1.1-beta.3
-    created: "2025-04-30T14:06:01.355614+05:30"
+    created: "2025-04-30T14:38:03.529068+05:30"
     dependencies:
     - alias: onelens-agent
       condition: onelens-agent.enabled
@@ -30,9 +30,9 @@ entries:
     version: 0.1.1-beta.3
   onelensdeployer:
   - apiVersion: v2
-    created: "2025-04-30T14:06:01.355994+05:30"
+    created: "2025-04-30T14:38:03.529411+05:30"
     description: A Helm chart for deploying Kubernetes Jobs and CronJobs
-    digest: d78ba376ec3ed17549d030df887db45dd8d9a595b7862aa5aee5f2deafafa5b9
+    digest: 9d7701babe47c2995151704af9e3bc2a5f5df0dad5bb380667e785bbb7cb6ff4
     keywords:
     - job
     - cronjob
@@ -48,4 +48,4 @@ entries:
     urls:
     - https://astuto-ai.github.io/onelens-installation-scripts/onelensdeployer-0.1.0.tgz
     version: 0.1.0
-generated: "2025-04-30T14:06:01.347756+05:30"
+generated: "2025-04-30T14:38:03.521198+05:30"
