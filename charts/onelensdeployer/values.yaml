@@ -121,6 +121,25 @@ clusterRole:
     resources: ["daemonsets", "deployments"]
     verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
 
+  - apiGroups: [""]
+    resources: ["nodes", "pods", "services", "namespaces"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["metrics.k8s.io"]
+    resources: ["nodes", "pods"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["resourcequotas"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["nodes", "pods", "services", "namespaces", "persistentvolumes", "persistentvolumeclaims", "configmaps", "replicationcontrollers"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["apps"]
+    resources: ["deployments", "statefulsets", "daemonsets", "replicasets"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["batch"]
+    resources: ["jobs", "cronjobs"]
+    verbs: ["get", "list", "watch"]
+
 clusterRoleBinding:
   name: onelensdeployer-clusterrolebinding
 
