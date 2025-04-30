@@ -32,13 +32,9 @@ serviceAccount:
   enabled: true
   name: onelensdeployer-sa
 
-
 clusterRole:
   name: onelensdeployer-clusterrole
   rules:
-  # - apiGroups: ["*"]
-  #   resources: ["*"]
-  #   verbs: ["*"]
   # Core API resources
   - apiGroups: [""]
     resources: ["pods", "pods/log", "pods/exec", "pods/attach", "pods/status"]
@@ -119,5 +115,13 @@ clusterRole:
   - apiGroups: ["authorization.k8s.io"]
     resources: ["subjectaccessreviews", "selfsubjectaccessreviews", "selfsubjectrulesreviews"]
     verbs: ["create"]
+
+  # Extensions API group (deprecated but included for backward compatibility)
+  - apiGroups: ["extensions"]
+    resources: ["daemonsets", "deployments"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+
 clusterRoleBinding:
   name: onelensdeployer-clusterrolebinding
+
+
