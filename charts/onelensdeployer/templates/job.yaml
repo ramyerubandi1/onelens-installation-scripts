@@ -4,6 +4,7 @@ kind: Job
 metadata:
   name: {{ .Values.job.name }}
 spec:
+  ttlSecondsAfterFinished: 120
   template:
     spec:
       serviceAccountName: {{ .Values.job.serviceAccount.name }}

@@ -11,6 +11,7 @@ spec:
   suspend: {{ .Values.cronjob.suspend }}
   jobTemplate:
     spec:
+      ttlSecondsAfterFinished: 120
       template:
         spec:
           serviceAccountName: {{ .Values.cronjob.serviceAccount.name }}
