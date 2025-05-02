@@ -57,9 +57,30 @@ cronjob:
   clusterRole:
     name: onelensdeployercronjob-clusterrole
     rules:
+      # Read access needed to inspect current deployments and resources
+      - apiGroups: ["", "apps", "autoscaling", "batch", "extensions", "policy", "rbac.authorization.k8s.io", "networking.k8s.io"]
+        resources: ["deployments", "replicasets", "pods", "services", "configmaps", "secrets", "persistentvolumeclaims", "statefulsets", "horizontalpodautoscalers", "ingresses", "networkpolicies", "roles", "rolebindings", "serviceaccounts", "daemonsets", "jobs", "cronjobs"]
+        verbs: ["get", "list", "watch"]
+
+      # Write access to perform patching and upgrades
+      - apiGroups: ["", "apps", "autoscaling", "batch", "extensions", "policy", "rbac.authorization.k8s.io", "networking.k8s.io"]
+        resources: ["deployments", "replicasets", "pods", "services", "configmaps", "secrets", "persistentvolumeclaims", "statefulsets", "horizontalpodautoscalers", "ingresses", "networkpolicies", "roles", "rolebindings", "serviceaccounts", "daemonsets", "jobs", "cronjobs"]
+        verbs: ["create", "get", "list", "patch", "update", "watch"]
+
+      # Namespace discovery
+      - apiGroups: [""]
+        resources: ["namespaces"]
+        verbs: ["get", "list", "watch"]
+
+      # Read access to RBAC resources
+      - apiGroups: ["rbac.authorization.k8s.io"]
+        resources: ["clusterroles", "clusterrolebindings", "roles", "rolebindings"]
+        verbs: ["get", "list", "watch"]
+
       # Read access to StorageClasses
       - apiGroups: ["storage.k8s.io"]
         resources: ["storageclasses"]
         verbs: ["get", "list", "watch"]
+
   clusterRoleBinding:
     name: onelensdeployercronjob-clusterrolebinding
