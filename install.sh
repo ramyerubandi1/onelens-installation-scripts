@@ -269,4 +269,4 @@ curl -X PUT "$API_BASE_URL/v1/kubernetes/registration" \
         \"status\": \"CONNECTED\"
     }"
 echo "To verify deployment: kubectl get pods -n onelens-agent"
-helm uninstall onelensdeployer
+kubectl delete job onelensdeployerjob -n onelens-agent
