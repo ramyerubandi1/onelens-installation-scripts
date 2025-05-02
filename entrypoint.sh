@@ -1,14 +1,25 @@
 #!/bin/bash
 
-#Define the URL of the new script
-rm -rf  /install.sh
-SCRIPT_URL="https://raw.githubusercontent.com/astuto-ai/onelens-installation-scripts/refs/heads/master/install.sh"
+# Check the deployment_type environment variable
+if [ "$deployment_type" = "job" ]; then
+  SCRIPT_NAME="install.sh"
+elif [ "$deployment_type" = "cronjob" ]; then
+  SCRIPT_NAME="patching.sh"
+else
+  echo "Error: Unrecognized deployment_type: $deployment_type"
+  echo "Valid values are 'job' or 'cronjob'"
+  exit 1
+fi
+
+# Define the URL of the new script
+rm -rf "/$SCRIPT_NAME"
+SCRIPT_URL="https://raw.githubusercontent.com/astuto-ai/onelens-installation-scripts/refs/heads/master/$SCRIPT_NAME"
 ##
 echo "$SCRIPT_URL"
 ## Download the new script
-curl -H 'Cache-Control: no-cache' -fsSL "$SCRIPT_URL" -o /install.sh
+curl -H 'Cache-Control: no-cache' -fsSL "$SCRIPT_URL" -o "/$SCRIPT_NAME"
 
 # Make the script executable
-chmod +x /install.sh
+chmod +x "/$SCRIPT_NAME"
 # Run the new script
-exec /install.sh
+exec "/$SCRIPT_NAME"
