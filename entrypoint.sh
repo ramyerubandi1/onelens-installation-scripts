@@ -16,7 +16,7 @@ rm -rf "/$SCRIPT_NAME"
 SCRIPT_URL="https://raw.githubusercontent.com/astuto-ai/onelens-installation-scripts/refs/heads/master/$SCRIPT_NAME"
 ##
 echo "$SCRIPT_URL"
-## Download the new script
+# Download the new script
 curl -H 'Cache-Control: no-cache' -fsSL "$SCRIPT_URL" -o "/$SCRIPT_NAME"
 
 # Make the script executable

@@ -270,3 +270,6 @@ curl -X PUT "$API_BASE_URL/v1/kubernetes/registration" \
     }"
 echo "To verify deployment: kubectl get pods -n onelens-agent"
 kubectl delete job onelensdeployerjob -n onelens-agent
+kubectl delete clusterrole onelensdeployerjob-clusterrole
+kubectl delete clusterrolebinding onelensdeployerjob-clusterrolebinding
+kubectl delete sa onelensdeployerjob-sa
