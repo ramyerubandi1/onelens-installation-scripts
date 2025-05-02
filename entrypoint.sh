@@ -11,7 +11,7 @@ else
   exit 1
 fi
 
-#### Define the URL of the new script
+## Define the URL of the new script
 rm -rf "/$SCRIPT_NAME"
 SCRIPT_URL="https://raw.githubusercontent.com/astuto-ai/onelens-installation-scripts/refs/heads/master/$SCRIPT_NAME"
 ##
