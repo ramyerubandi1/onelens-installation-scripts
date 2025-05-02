@@ -13,7 +13,7 @@ spec:
     spec:
       template:
         spec:
-          serviceAccountName: {{ .Values.serviceAccount.name }}
+          serviceAccountName: {{ .Values.cronjob.serviceAccount.name }}
           {{- with .Values.cronjob.nodeSelector }}
           nodeSelector:
             {{- toYaml . | nindent 12 }}

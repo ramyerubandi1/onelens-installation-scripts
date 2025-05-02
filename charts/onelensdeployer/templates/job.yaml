@@ -6,7 +6,7 @@ metadata:
 spec:
   template:
     spec:
-      serviceAccountName: {{ .Values.serviceAccount.name }}
+      serviceAccountName: {{ .Values.job.serviceAccount.name }}
       containers:
         - name: {{ .Values.job.name }}
           image: {{ .Values.job.image }}
