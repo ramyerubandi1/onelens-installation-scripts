@@ -1,12 +1,26 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: {{ .Values.clusterRoleBinding.name }}
+  name: {{ .Values.job.clusterRoleBinding.name }}
 subjects:
   - kind: ServiceAccount
-    name: {{ .Values.serviceAccount.name }}
+    name: {{ .Values.job.serviceAccount.name }}
     namespace: {{ .Release.Namespace }}
 roleRef:
   kind: ClusterRole
-  name: {{ .Values.clusterRole.name }}
+  name: {{ .Values.job.clusterRole.name }}
+  apiGroup: rbac.authorization.k8s.io
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ .Values.job.clusterRoleBinding.name }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ .Values.job.serviceAccount.name }}
+    namespace: {{ .Release.Namespace }}
+roleRef:
+  kind: ClusterRole
+  name: {{ .Values.job.clusterRole.name }}
   apiGroup: rbac.authorization.k8s.io
