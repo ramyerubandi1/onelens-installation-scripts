@@ -12,4 +12,9 @@ name: onelensdeployer
 sources:
 - https://github.com/your-repo/job-cronjob-chart
 type: application
-version: 0.1.0
+version: 0.2.0
+
+
+#RELEASE-NOTES
+#0.1.0 - Very stable version
+#0.2.0 - Changes the name of the cronjob
