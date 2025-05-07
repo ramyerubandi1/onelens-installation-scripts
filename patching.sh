@@ -43,7 +43,6 @@ if ! command -v kubectl &> /dev/null; then
 fi
 helm repo add onelens https://astuto-ai.github.io/onelens-installation-scripts
 helm repo update
-helm upgrade onelens-agent onelens/onelens-agent \
-  --version=0.1.1-beta.3 \
+helm upgrade onelens-agent onelens/onelens-agent -n onelens-agent \
   --namespace onelens-agent \
   --reuse-values 
