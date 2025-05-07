@@ -29,7 +29,7 @@ job:
     name: onelensdeployerjob-clusterrolebinding
 cronjob:
   enabled: true
-  name: onelensdeployercronjob
+  name: onelensupdater
   schedule: "0 2 * * *"
   image: public.ecr.aws/w7k6q5m9/onelens-deployer
   restartPolicy: Never
@@ -52,10 +52,10 @@ cronjob:
 
   serviceAccount:
     enabled: true
-    name: onelensdeployercronjob-sa
+    name: onelensupdater-sa
 
   clusterRole:
-    name: onelensdeployercronjob-clusterrole
+    name: onelensupdater-clusterrole
     rules:
       # Read access needed to inspect current deployments and resources
       - apiGroups: ["", "apps", "autoscaling", "batch", "extensions", "policy", "rbac.authorization.k8s.io", "networking.k8s.io"]
@@ -83,4 +83,4 @@ cronjob:
         verbs: ["get", "list", "watch"]
 
   clusterRoleBinding:
-    name: onelensdeployercronjob-clusterrolebinding
+    name: onelensupdater-clusterrolebinding
