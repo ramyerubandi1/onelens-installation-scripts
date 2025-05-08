@@ -41,6 +41,15 @@ if ! command -v kubectl &> /dev/null; then
     echo "Error: kubectl not found. Please install kubectl."
     exit 1
 fi
+#!/bin/bash
+
+echo "helm repo add onelens https://astuto-ai.github.io/onelens-installation-scripts"
+echo "helm repo update"
+echo "helm upgrade onelens-agent onelens/onelens-agent \\"
+echo "  --version=0.1.1-beta.3.1 \\"
+echo "  --namespace onelens-agent --history-max 200"
+
+
 helm repo add onelens https://astuto-ai.github.io/onelens-installation-scripts
 helm repo update
 helm upgrade onelens-agent onelens/onelens-agent \
