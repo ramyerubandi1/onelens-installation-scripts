@@ -371,6 +371,18 @@ prometheus:
 
   scrapeConfigFiles: []
 
+  extraScrapeConfigs:
+    - job_name: opencost
+      honor_labels: true
+      scrape_interval: 1m
+      scrape_timeout: 10s
+      metrics_path: /metrics
+      scheme: http
+      dns_sd_configs:
+      - names:
+        - onelens-agent-prometheus-opencost-exporter
+        type: 'A'
+        port: 9003
   serverFiles:
     alerting_rules.yml: {}
 
@@ -574,18 +586,6 @@ prometheus:
                 replacement: '[$2]:$1'
                 target_label: __address__
 
-      extraScrapeConfigs:
-        - job_name: opencost
-          honor_labels: true
-          scrape_interval: 1m
-          scrape_timeout: 10s
-          metrics_path: /metrics
-          scheme: http
-          dns_sd_configs:
-          - names:
-            - onelens-agent-prometheus-opencost-exporter
-            type: 'A'
-            port: 9003
 
 
   alertRelabelConfigs: {}
