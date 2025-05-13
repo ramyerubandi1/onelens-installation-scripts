@@ -371,7 +371,7 @@ prometheus:
 
   scrapeConfigFiles: []
 
-  extraScrapeConfigs: | 
+  extraScrapeConfigs: |
     - job_name: opencost
       honor_labels: true
       scrape_interval: 1m
@@ -379,10 +379,10 @@ prometheus:
       metrics_path: /metrics
       scheme: http
       dns_sd_configs:
-      - names:
-        - onelens-agent-prometheus-opencost-exporter
-        type: 'A'
-        port: 9003
+        - names:
+            - onelens-agent-prometheus-opencost-exporter
+          type: 'A'
+          port: 9003
   serverFiles:
     alerting_rules.yml: {}
 
