@@ -223,6 +223,7 @@ echo "✅ Downloaded $FILE successfully."
 
 CMD="helm upgrade --install onelens-agent -n onelens-agent --create-namespace onelens/onelens-agent \
     --version \"\${RELEASE_VERSION:=0.1.1-beta.3}\" \
+    -f $FILE \
     --set onelens-agent.env.CLUSTER_NAME=\"$CLUSTER_NAME\" \
     --set-string onelens-agent.env.ACCOUNT_ID=\"$ACCOUNT\" \
     --set onelens-agent.secrets.API_BASE_URL=\"$API_BASE_URL\" \
