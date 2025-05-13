@@ -1167,9 +1167,3 @@ prometheus-opencost-exporter:
         serviceName: onelens-agent-prometheus-server
         namespaceName: onelens-agent
         port: 80
-
-
-
-
-
-
