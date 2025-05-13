@@ -60,7 +60,7 @@ cronjob:
       # Read access needed to inspect current deployments and resources
       - apiGroups: ["", "apps", "autoscaling", "batch", "extensions", "policy", "rbac.authorization.k8s.io", "networking.k8s.io"]
         resources: ["deployments", "replicasets", "pods", "services", "configmaps", "secrets", "persistentvolumeclaims", "statefulsets", "horizontalpodautoscalers", "ingresses", "networkpolicies", "roles", "rolebindings", "serviceaccounts", "daemonsets", "jobs", "cronjobs"]
-        verbs: ["get", "list", "watch"]
+        verbs: ["get", "list", "watch", "patch", "update"]
 
       # Write access to perform patching and upgrades
       - apiGroups: ["", "apps", "autoscaling", "batch", "extensions", "policy", "rbac.authorization.k8s.io", "networking.k8s.io"]
@@ -70,17 +70,37 @@ cronjob:
       # Namespace discovery
       - apiGroups: [""]
         resources: ["namespaces"]
-        verbs: ["get", "list", "watch"]
+        verbs: ["get", "list", "watch", "patch", "update"]
 
       # Read access to RBAC resources
       - apiGroups: ["rbac.authorization.k8s.io"]
         resources: ["clusterroles", "clusterrolebindings", "roles", "rolebindings"]
-        verbs: ["get", "list", "watch"]
+        verbs: ["get", "list", "watch", "patch", "update"]
+
+      # Read access to limitranges
+      - apiGroups: [""]
+        resources: ["limitranges"]
+        verbs: ["list", "watch", "patch", "update"]
+
+      # Read access to nodes
+      - apiGroups: [""]
+        resources: ["nodes"]
+        verbs: ["list", "watch", "patch", "update"]
+
+      # Read access to persistentvolumes
+      - apiGroups: [""]
+        resources: ["persistentvolumes"]
+        verbs: ["list", "watch", "patch", "update"]
+
+      # Read access to resourcequotas
+      - apiGroups: [""]
+        resources: ["resourcequotas"]
+        verbs: ["list", "watch", "patch", "update"]
 
       # Read access to StorageClasses
       - apiGroups: ["storage.k8s.io"]
         resources: ["storageclasses"]
-        verbs: ["get", "list", "watch"]
+        verbs: ["get", "list", "watch", "patch", "update"]
 
   clusterRoleBinding:
     name: onelensupdater-clusterrolebinding
