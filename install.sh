@@ -207,8 +207,23 @@ export TOLERATION_EFFECT="${TOLERATION_EFFECT:=}"
 export NODE_SELECTOR_KEY="${NODE_SELECTOR_KEY:=}"
 export NODE_SELECTOR_VALUE="${NODE_SELECTOR_VALUE:=}"
 
+
+URL="https://raw.githubusercontent.com/astuto-ai/onelens-installation-scripts/refs/heads/master/globalvalues.yaml"
+FILE="globalvalues.yaml"
+
+echo "Downloading $FILE from $URL..."
+
+# Use -f to fail silently on server errors and -O to save with original name
+if ! curl -f -O "$URL"; then
+  echo "❌ Failed to download $FILE from $URL"
+  exit 1
+fi
+
+echo "✅ Downloaded $FILE successfully."
+
 CMD="helm upgrade --install onelens-agent -n onelens-agent --create-namespace onelens/onelens-agent \
     --version \"\${RELEASE_VERSION:=0.1.1-beta.3}\" \
+    -f "$FILE" \
     --set onelens-agent.env.CLUSTER_NAME=\"$CLUSTER_NAME\" \
     --set-string onelens-agent.env.ACCOUNT_ID=\"$ACCOUNT\" \
     --set onelens-agent.secrets.API_BASE_URL=\"$API_BASE_URL\" \
