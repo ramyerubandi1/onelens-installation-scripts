@@ -371,7 +371,7 @@ prometheus:
 
   scrapeConfigFiles: []
 
-  extraScrapeConfigs:
+  extraScrapeConfigs: | 
     - job_name: opencost
       honor_labels: true
       scrape_interval: 1m
