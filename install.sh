@@ -206,7 +206,7 @@ export TOLERATION_OPERATOR="${TOLERATION_OPERATOR:=}"
 export TOLERATION_EFFECT="${TOLERATION_EFFECT:=}"
 export NODE_SELECTOR_KEY="${NODE_SELECTOR_KEY:=}"
 export NODE_SELECTOR_VALUE="${NODE_SELECTOR_VALUE:=}"
-
+export IMAGE_PULL_SECRET="${IMAGE_PULL_SECRET:=}"
 
 URL="https://raw.githubusercontent.com/astuto-ai/onelens-installation-scripts/refs/heads/master/globalvalues.yaml"
 FILE="globalvalues.yaml"
@@ -234,6 +234,7 @@ CMD="helm upgrade --install onelens-agent -n onelens-agent --create-namespace on
     --set prometheus.server.persistentVolume.enabled=\"$PVC_ENABLED\" \
     --set prometheus.server.resources.requests.cpu=\"$CPU_REQUEST\" \
     --set prometheus.server.resources.requests.memory=\"$MEMORY_REQUEST\""
+
 # Append tolerations only if set
 if [[ -n "$TOLERATION_KEY" && -n "$TOLERATION_VALUE" && -n "$TOLERATION_OPERATOR" && -n "$TOLERATION_EFFECT" ]]; then
   for path in \
@@ -249,6 +250,8 @@ if [[ -n "$TOLERATION_KEY" && -n "$TOLERATION_VALUE" && -n "$TOLERATION_OPERATOR
       --set $path.tolerations[0].effect=\"$TOLERATION_EFFECT\""
   done
 fi
+
+# Append nodeSelector only if set
 if [[ -n "$NODE_SELECTOR_KEY" && -n "$NODE_SELECTOR_VALUE" ]]; then
   for path in \
     prometheus-opencost-exporter.opencost \
@@ -259,6 +262,19 @@ if [[ -n "$NODE_SELECTOR_KEY" && -n "$NODE_SELECTOR_VALUE" ]]; then
     CMD+=" --set $path.nodeSelector.$NODE_SELECTOR_KEY=\"$NODE_SELECTOR_VALUE\""
   done
 fi
+
+# Append imagePullSecrets only if set
+if [[ -n "$IMAGE_PULL_SECRET" ]]; then
+  for path in \
+    prometheus-opencost-exporter.opencost \
+    prometheus.server \
+    onelens-agent.cronJob \
+    prometheus.prometheus-pushgateway \
+    prometheus.kube-state-metrics; do
+    CMD+=" --set $path.imagePullSecrets=\"$IMAGE_PULL_SECRET\""
+  done
+fi
+
 # Final execution
 CMD+=" --wait || { echo \"Error: Helm deployment failed.\"; exit 1; }"
 
