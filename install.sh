@@ -32,7 +32,7 @@ send_logs() {
 trap 'send_logs; exit 1' ERR EXIT
 
 # Phase 2: Environment Variable Setup
-: "${RELEASE_VERSION:=0.1.1-beta.3}"
+: "${RELEASE_VERSION:=0.1.1-beta.4}"
 : "${IMAGE_TAG:=latest}"
 : "${API_BASE_URL:=https://api-in.onelens.cloud}"
 : "${PVC_ENABLED:=true}"
@@ -222,7 +222,7 @@ fi
 echo "✅ Downloaded $FILE successfully."
 
 CMD="helm upgrade --install onelens-agent -n onelens-agent --create-namespace onelens/onelens-agent \
-    --version \"\${RELEASE_VERSION:=0.1.1-beta.3}\" \
+    --version \"\${RELEASE_VERSION:=0.1.1-beta.4}\" \
     -f $FILE \
     --set onelens-agent.env.CLUSTER_NAME=\"$CLUSTER_NAME\" \
     --set-string onelens-agent.env.ACCOUNT_ID=\"$ACCOUNT\" \
