@@ -2,7 +2,7 @@ onelens-agent:
   enabled: true
 
   image:
-    repository: 609916866699.dkr.ecr.ap-southeast-1.amazonaws.com/onelens-agent
+    repository: public.ecr.aws/w7k6q5m9/onelens-agent
     tag: v0.1.1-beta.2
     pullPolicy: IfNotPresent
 
@@ -90,7 +90,7 @@ prometheus:
       enabled: true
       name: configmap-reload
       image:
-        repository: 609916866699.dkr.ecr.ap-southeast-1.amazonaws.com/prometheus-config-reloader
+        repository: quay.io/prometheus-operator/prometheus-config-reloader
         tag: v0.79.2
         digest: ""
         pullPolicy: IfNotPresent
@@ -145,7 +145,7 @@ prometheus:
     sidecarTemplateValues: {}
 
     image:
-      repository: 609916866699.dkr.ecr.ap-southeast-1.amazonaws.com/prometheus
+      repository: quay.io/prometheus/prometheus
       tag: "v3.1.0"
       digest: ""
       pullPolicy: IfNotPresent
@@ -637,8 +637,8 @@ prometheus:
 
     prometheusScrape: true
     image:
-      registry: 609916866699.dkr.ecr.ap-southeast-1.amazonaws.com
-      repository: kube-state-metrics
+      registry: registry.k8s.io
+      repository: kube-state-metrics/kube-state-metrics
       tag: ""
       sha: ""
       pullPolicy: IfNotPresent
@@ -925,7 +925,7 @@ prometheus:
     namespaceOverride: ""
 
     image:
-      repository: 609916866699.dkr.ecr.ap-southeast-1.amazonaws.com/pushgateway
+      repository: quay.io/prometheus/pushgateway
       tag: ""
       pullPolicy: IfNotPresent
 
@@ -1098,8 +1098,8 @@ prometheus-opencost-exporter:
       cloudProviderApiKey: ""
       defaultClusterId: 'default-cluster'
       image:
-        registry: 609916866699.dkr.ecr.ap-southeast-1.amazonaws.com
-        repository: kubecost-cost-model
+        registry: quay.io
+        repository: kubecost1/kubecost-cost-model
         tag: ""
         pullPolicy: IfNotPresent
       replicas: 1
