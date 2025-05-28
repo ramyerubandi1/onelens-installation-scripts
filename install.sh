@@ -33,7 +33,7 @@ trap 'send_logs; exit 1' ERR EXIT
 
 # Phase 2: Environment Variable Setup
 : "${RELEASE_VERSION:=0.1.1-beta.4}"
-: "${IMAGE_TAG:=latest}"
+: "${IMAGE_TAG:=v1.0.0}"
 : "${API_BASE_URL:=https://api-in.onelens.cloud}"
 : "${PVC_ENABLED:=true}"
 
