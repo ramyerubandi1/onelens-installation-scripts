@@ -13,6 +13,8 @@ jobs:
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 0  # Needed to access previous commits
 
       - name: Install yq for YAML manipulation
         run: |
