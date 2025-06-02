@@ -63,8 +63,8 @@ jobs:
           dep_changed=false
           while IFS= read -r dep; do
             name=$(echo "$dep" | cut -d':' -f1)
-            old_ver=$(echo "$old_deps" | grep "^$name:" | cut -d':' -f2)
-            new_ver=$(echo "$new_deps" | grep "^$name:" | cut -d':' -f2)
+            old_ver=$(echo "$old_deps" | grep -F "$name:" | cut -d':' -f2)
+            new_ver=$(echo "$new_deps" | grep -F "$name:" | cut -d':' -f2)
             if [ "$old_ver" != "$new_ver" ]; then
               echo "Dependency '$name' version changed: $old_ver -> $new_ver"
               dep_changed=true
