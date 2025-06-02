@@ -1,0 +1,186 @@
+name: Package Onelens-Agent Helm Chart
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  validate-and-package:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v3
+
+      - name: Install yq for YAML manipulation
+        run: |
+          sudo wget https://github.com/mikefarah/yq/releases/download/v4.40.5/yq_linux_amd64 -O /usr/bin/yq
+          sudo chmod +x /usr/bin/yq
+
+      - name: Validate Chart.yaml, Chart.lock, and version.md
+        id: validate
+        run: |
+          git fetch origin ${{ github.event.before }}
+
+          mkdir -p tmp/old tmp/new
+
+          # Get previous version files, fallback to empty if not found
+          git show ${{ github.event.before }}:charts/onelens-agent/Chart.yaml > tmp/old/Chart.yaml || echo '{}' > tmp/old/Chart.yaml
+          git show ${{ github.event.before }}:charts/onelens-agent/Chart.lock > tmp/old/Chart.lock || echo '{}' > tmp/old/Chart.lock
+          git show ${{ github.event.before }}:charts/onelens-agent/version.md > tmp/old/version.md || echo '' > tmp/old/version.md
+
+          # Copy current files
+          cp charts/onelens-agent/Chart.yaml tmp/new/Chart.yaml
+          cp charts/onelens-agent/Chart.lock tmp/new/Chart.lock
+          cp charts/onelens-agent/version.md tmp/new/version.md
+
+          # Extract versions
+          old_version=$(yq e '.version' tmp/old/Chart.yaml)
+          new_version=$(yq e '.version' tmp/new/Chart.yaml)
+          old_app_version=$(yq e '.appVersion' tmp/old/Chart.yaml)
+          new_app_version=$(yq e '.appVersion' tmp/new/Chart.yaml)
+
+          # Extract dependencies: name:version
+          old_deps=$(yq e '.dependencies[] | "\(.name):\(.version)"' tmp/old/Chart.yaml | sort)
+          new_deps=$(yq e '.dependencies[] | "\(.name):\(.version)"' tmp/new/Chart.yaml | sort)
+
+          # Extract Chart.lock dependencies
+          lock_deps=$(yq e '.dependencies[] | "\(.name):\(.version)"' tmp/new/Chart.lock | sort)
+
+          echo "Old version: $old_version"
+          echo "New version: $new_version"
+          echo "Old appVersion: $old_app_version"
+          echo "New appVersion: $new_app_version"
+
+          # Semantic version comparison helper (true if $2 > $1)
+          version_gt() {
+            test "$(printf '%s\n%s\n' "$1" "$2" | sort -V | head -n1)" != "$2"
+          }
+
+          echo "Checking if dependency versions changed..."
+          dep_changed=false
+          while IFS= read -r dep; do
+            name=$(echo "$dep" | cut -d':' -f1)
+            old_ver=$(echo "$old_deps" | grep "^$name:" | cut -d':' -f2)
+            new_ver=$(echo "$new_deps" | grep "^$name:" | cut -d':' -f2)
+            if [ "$old_ver" != "$new_ver" ]; then
+              echo "Dependency '$name' version changed: $old_ver -> $new_ver"
+              dep_changed=true
+            fi
+          done <<< "$(echo "$new_deps")"
+
+          echo "Dependency versions changed? $dep_changed"
+
+          echo "Checking if Chart.lock dependencies match Chart.yaml..."
+          if [ -z "$new_deps" ] || [ -z "$lock_deps" ]; then
+            echo "❌ One of the dependency lists is empty! Check Chart.yaml and Chart.lock."
+            exit 1
+          fi
+          if [ "$new_deps" != "$lock_deps" ]; then
+            echo "❌ Chart.lock dependencies do NOT match Chart.yaml dependencies!"
+            echo "Chart.yaml deps:"
+            echo "$new_deps"
+            echo "Chart.lock deps:"
+            echo "$lock_deps"
+            exit 1
+          fi
+          echo "✅ Chart.lock dependencies match."
+
+          echo "Checking if version field changed..."
+          version_changed=false
+          if [ "$old_version" != "$new_version" ]; then
+            version_changed=true
+            echo "Version changed: $old_version -> $new_version"
+          else
+            echo "Version NOT changed."
+          fi
+
+          echo "Checking if appVersion field changed..."
+          appversion_changed=false
+          if [ "$old_app_version" != "$new_app_version" ]; then
+            appversion_changed=true
+            echo "appVersion changed: $old_app_version -> $new_app_version"
+          else
+            echo "appVersion NOT changed."
+          fi
+
+          echo "Checking if version.md contains new version entry..."
+          if grep -q "$new_version" tmp/new/version.md; then
+            echo "version.md contains new version entry."
+            versionmd_has_new_version=true
+          else
+            versionmd_has_new_version=false
+            echo "❌ version.md does NOT contain new version entry."
+          fi
+
+          # Logic checks
+
+          # If dependencies changed, version and appVersion must be bumped
+          if [ "$dep_changed" = true ]; then
+            if ! $version_changed || ! $appversion_changed ; then
+              echo "❌ Dependencies changed but version and/or appVersion NOT bumped."
+              exit 1
+            fi
+            # Also version.md must have new version
+            if [ "$versionmd_has_new_version" = false ]; then
+              echo "❌ Dependencies changed but version.md not updated with new version."
+              exit 1
+            fi
+          fi
+
+          # If version or appVersion changed but dependencies NOT changed, warn (not fail)
+          if ( $version_changed || $appversion_changed ) && [ "$dep_changed" = false ]; then
+            echo "⚠️ Version or appVersion changed but dependencies did not change."
+            # Allow, but mark changed to true for packaging
+            echo "changed=true" >> $GITHUB_ENV
+            exit 0
+          fi
+
+          # If nothing changed at all, exit early
+          if [ "$dep_changed" = false ] && [ "$version_changed" = false ] && [ "$appversion_changed" = false ]; then
+            echo "No relevant changes detected."
+            echo "changed=false" >> $GITHUB_ENV
+            exit 0
+          fi
+
+          # If dependencies changed and version/appVersion bumped correctly:
+          echo "All checks passed."
+          echo "changed=true" >> $GITHUB_ENV
+
+      - name: Set up Helm
+        if: env.changed == 'true'
+        uses: azure/setup-helm@v3
+        with:
+          version: v3.13.3
+
+      - name: Clone onelens-installation-scripts Repo
+        if: env.changed == 'true'
+        run: |
+          git clone git@github.com:astuto-ai/onelens-installation-scripts.git
+
+      - name: Update Helm Dependencies
+        if: env.changed == 'true'
+        run: |
+          cd onelens-installation-scripts/charts/onelens-agent
+          helm dependency update
+
+      - name: Package Helm Chart
+        if: env.changed == 'true'
+        run: |
+          cd onelens-installation-scripts/charts/onelens-agent
+          helm package .
+
+      - name: Update Helm Repo Index
+        if: env.changed == 'true'
+        run: |
+          cd onelens-installation-scripts/charts/onelens-agent
+          helm repo index . --url https://astuto-ai.github.io/onelens-installation-scripts/
+
+      - name: Upload Packaged Chart as Artifact
+        if: env.changed == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: packaged-onelens-agent-chart
+          path: onelens-installation-scripts/charts/onelens-agent/*.tgz
