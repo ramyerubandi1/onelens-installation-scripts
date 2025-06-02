@@ -3,7 +3,7 @@ name: Package Onelens-Agent Helm Chart
 on:
   push:
     branches:
-      - onelens-workflow
+      - main
   workflow_dispatch:
 
 jobs:
