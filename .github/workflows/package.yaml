@@ -118,17 +118,17 @@ jobs:
           fi
 
           # Extract and sort dependencies from Chart.yaml
-          YAML_VERSIONS=$(yq -o=json '.dependencies[] | {name, version}' "$CHART_FILE" | jq -r '"\(.name):\(.version)"' | sort)
+          YAML_DEPS=$(yq '.dependencies[] | "\(.name):\(.version)"' "$CHART_FILE" | sort)
 
           # Extract and sort dependencies from Chart.lock
-          LOCK_VERSIONS=$(yq -o=json '.dependencies[] | {name, version}' "$LOCK_FILE" | jq -r '"\(.name):\(.version)"' | sort)
+          LOCK_DEPS=$(yq '.dependencies[] | "\(.name):\(.version)"' "$LOCK_FILE" | sort)
 
           echo "📦 Chart.yaml Dependencies:"
-          echo "$YAML_VERSIONS"
+          echo "$YAML_DEPS"
           echo "🔒 Chart.lock Dependencies:"
-          echo "$LOCK_VERSIONS"
+          echo "$LOCK_DEPS"
 
-          if [ "$YAML_VERSIONS" != "$LOCK_VERSIONS" ]; then
+          if [ "$YAML_DEPS" != "$LOCK_DEPS" ]; then
             echo "❌ Mismatch between Chart.yaml and Chart.lock dependency versions!"
             echo "Please run 'helm dependency update charts/onelens-agent' to regenerate Chart.lock."
             exit 1
