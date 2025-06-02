@@ -119,16 +119,26 @@ jobs:
           cat chart_lock_deps.txt
       
           echo ""
-          echo "🔍 Comparing Chart.yaml and Chart.lock..."
+          echo "🔍 Comparing Chart.yaml and Chart.lock dependency versions..."
       
-          if ! diff -u chart_yaml_deps.txt chart_lock_deps.txt > deps_diff.txt; then
-            echo "❌ Dependency version mismatch between Chart.yaml and Chart.lock!"
-            cat deps_diff.txt
+          # Compare dependency versions per name, fail if any version mismatch
+          while read -r line; do
+            NAME=$(echo "$line" | cut -d':' -f1)
+            VERSION_YAML=$(echo "$line" | cut -d':' -f2 | tr -d ' ')
+            VERSION_LOCK=$(grep "^$NAME:" chart_lock_deps.txt | cut -d':' -f2 | tr -d ' ' || echo "MISSING")
+      
+            if [ "$VERSION_YAML" != "$VERSION_LOCK" ]; then
+              echo "❌ Version mismatch for dependency '$NAME': Chart.yaml has '$VERSION_YAML', Chart.lock has '$VERSION_LOCK'"
+              MISMATCH=1
+            fi
+          done < chart_yaml_deps.txt
+      
+          if [ "${MISMATCH:-0}" -eq 1 ]; then
             echo ""
             echo "💡 Run: helm dependency update charts/onelens-agent"
             exit 1
           else
-            echo "✅ Chart.lock matches the dependency versions in Chart.yaml"
+            echo "✅ All dependency versions match between Chart.yaml and Chart.lock"
           fi
 
 
