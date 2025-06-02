@@ -117,10 +117,8 @@ jobs:
             exit 0
           fi
 
-          # Extract and sort dependencies from Chart.yaml
+          # Corrected: use single quotes around the yq expression and allow Bash to interpolate inside
           YAML_DEPS=$(yq '.dependencies[] | "\(.name):\(.version)"' "$CHART_FILE" | sort)
-
-          # Extract and sort dependencies from Chart.lock
           LOCK_DEPS=$(yq '.dependencies[] | "\(.name):\(.version)"' "$LOCK_FILE" | sort)
 
           echo "📦 Chart.yaml Dependencies:"
