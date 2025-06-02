@@ -61,6 +61,50 @@ jobs:
             fi
           fi
 
+      - name: Check if dependency version changed but chart version not updated
+        run: |
+          CHART_FILE="charts/onelens-agent/Chart.yaml"
+          VERSION_FILE="charts/onelens-agent/version.md"
+          
+          PREV_COMMIT=$(git rev-parse HEAD^)
+
+          if git diff --quiet "$PREV_COMMIT" -- "$CHART_FILE"; then
+            echo "No changes to $CHART_FILE detected. Skipping version check."
+            exit 0
+          fi
+
+          OLD_DEP_VERSIONS=$(git show "$PREV_COMMIT:$CHART_FILE" | yq '.dependencies[].version')
+          NEW_DEP_VERSIONS=$(cat "$CHART_FILE" | yq '.dependencies[].version')
+
+          OLD_CHART_VERSION=$(git show "$PREV_COMMIT:$CHART_FILE" | yq '.version')
+          NEW_CHART_VERSION=$(cat "$CHART_FILE" | yq '.version')
+
+          OLD_APP_VERSION=$(git show "$PREV_COMMIT:$CHART_FILE" | yq '.appVersion')
+          NEW_APP_VERSION=$(cat "$CHART_FILE" | yq '.appVersion')
+
+          if [ "$OLD_DEP_VERSIONS" != "$NEW_DEP_VERSIONS" ]; then
+            echo "⚠️ Detected a change in dependency versions."
+            if [ "$OLD_CHART_VERSION" = "$NEW_CHART_VERSION" ] || [ "$OLD_APP_VERSION" = "$NEW_APP_VERSION" ]; then
+              echo "❌ Dependency version changed, but version or appVersion not updated."
+              echo "Old Chart version: $OLD_CHART_VERSION"
+              echo "New Chart version: $NEW_CHART_VERSION"
+              echo "Old App version: $OLD_APP_VERSION"
+              echo "New App version: $NEW_APP_VERSION"
+              exit 1
+            fi
+          fi
+
+          if [ "$OLD_CHART_VERSION" != "$NEW_CHART_VERSION" ]; then
+            echo "🧐 Chart version changed from $OLD_CHART_VERSION to $NEW_CHART_VERSION"
+
+            if ! grep -q "$NEW_CHART_VERSION" "$VERSION_FILE"; then
+              echo "❌ Chart version updated to $NEW_CHART_VERSION, but version.md does not contain it."
+              exit 1
+            else
+              echo "✅ version.md contains the updated Chart version $NEW_CHART_VERSION"
+            fi
+          fi
+
 
       - name: All checks passed
         run: echo "✅ All checks passed. No packaging or publishing steps executed."
