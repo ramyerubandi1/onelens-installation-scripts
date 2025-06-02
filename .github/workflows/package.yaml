@@ -144,12 +144,21 @@ jobs:
             echo "✅ All dependency versions match between Chart.yaml and Chart.lock"
           fi
 
-
-
-
-
-
-
-
       - name: All checks passed
         run: echo "✅ All checks passed. No packaging or publishing steps executed."
+#      - name: Clone onelens-installation-scripts repo
+#        run: |
+#          git clone git@github.com:astuto-ai/onelens-installation-scripts.git
+#
+#      - name: Prepare chart packaging
+#        working-directory: onelens-installation-scripts/charts/onelens-agent
+#        run: |
+#          echo "📥 Updating Helm dependencies"
+#          helm dependency update
+#
+#          echo "📦 Packaging Helm chart"
+#          helm package .
+#
+#          echo "🗂️ Updating Helm repo index"
+#          helm repo index . --url https://astuto-ai.github.io/onelens-installation-scripts/
+
