@@ -109,23 +109,22 @@ jobs:
         run: |
           CHART_FILE="charts/onelens-agent/Chart.yaml"
           LOCK_FILE="charts/onelens-agent/Chart.lock"
-
+      
           PREV_COMMIT=$(git rev-parse HEAD^)
-
+      
           if git diff --quiet "$PREV_COMMIT" -- "$CHART_FILE"; then
             echo "No changes to $CHART_FILE detected. Skipping lock check."
             exit 0
           fi
-
-          # Corrected: use single quotes around the yq expression and allow Bash to interpolate inside
-          YAML_DEPS=$(yq '.dependencies[] | "\(.name):\(.version)"' "$CHART_FILE" | sort)
-          LOCK_DEPS=$(yq '.dependencies[] | "\(.name):\(.version)"' "$LOCK_FILE" | sort)
-
+      
           echo "📦 Chart.yaml Dependencies:"
+          YAML_DEPS=$(yq -r '.dependencies[] | "\(.name):\(.version)"' "$CHART_FILE" | sort)
           echo "$YAML_DEPS"
+      
           echo "🔒 Chart.lock Dependencies:"
+          LOCK_DEPS=$(yq -r '.dependencies[] | "\(.name):\(.version)"' "$LOCK_FILE" | sort)
           echo "$LOCK_DEPS"
-
+      
           if [ "$YAML_DEPS" != "$LOCK_DEPS" ]; then
             echo "❌ Mismatch between Chart.yaml and Chart.lock dependency versions!"
             echo "Please run 'helm dependency update charts/onelens-agent' to regenerate Chart.lock."
@@ -133,6 +132,7 @@ jobs:
           else
             echo "✅ Chart.lock matches the dependency versions in Chart.yaml"
           fi
+
 
 
 
