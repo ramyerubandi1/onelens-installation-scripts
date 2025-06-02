@@ -105,6 +105,36 @@ jobs:
             fi
           fi
 
+      - name: Check if Chart.lock matches updated dependencies in Chart.yaml
+        run: |
+          CHART_FILE="charts/onelens-agent/Chart.yaml"
+          LOCK_FILE="charts/onelens-agent/Chart.lock"
+
+          # Only run if Chart.yaml has changed
+          PREV_COMMIT=$(git rev-parse HEAD^)
+          if git diff --quiet "$PREV_COMMIT" -- "$CHART_FILE"; then
+            echo "No changes to $CHART_FILE detected. Skipping lock check."
+            exit 0
+          fi
+
+          # Read dependency versions from Chart.yaml and Chart.lock
+          YAML_VERSIONS=$(yq '.dependencies[] | "\(.name):\(.version)"' "$CHART_FILE" | sort)
+          LOCK_VERSIONS=$(yq '.dependencies[] | "\(.name):\(.version)"' "$LOCK_FILE" | sort)
+
+          echo "📦 Chart.yaml Dependencies:"
+          echo "$YAML_VERSIONS"
+          echo "🔒 Chart.lock Dependencies:"
+          echo "$LOCK_VERSIONS"
+
+          if [ "$YAML_VERSIONS" != "$LOCK_VERSIONS" ]; then
+            echo "❌ Mismatch between Chart.yaml and Chart.lock dependency versions!"
+            echo "Please run 'helm dependency update charts/onelens-agent' to regenerate Chart.lock."
+            exit 1
+          else
+            echo "✅ Chart.lock matches the dependency versions in Chart.yaml"
+          fi
+
+
 
       - name: All checks passed
         run: echo "✅ All checks passed. No packaging or publishing steps executed."
