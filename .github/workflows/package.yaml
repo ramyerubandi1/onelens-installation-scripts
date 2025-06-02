@@ -105,26 +105,32 @@ jobs:
             fi
           fi
 
-      - name: Check if Chart.lock matches updated dependencies in Chart.yaml
+      - name: Check Chart.lock matches Chart.yaml dependencies
         run: |
           CHART_FILE="charts/onelens-agent/Chart.yaml"
           LOCK_FILE="charts/onelens-agent/Chart.lock"
       
           echo "📦 Chart.yaml Dependencies:"
-          YAML_DEPS=$(yq -r '.dependencies[] | "\(.name):\(.version)"' "$CHART_FILE" | sort)
-          echo "$YAML_DEPS"
+          yq -r '.dependencies[] | "\(.name): \(.version)"' "$CHART_FILE" | sort > chart_yaml_deps.txt
+          cat chart_yaml_deps.txt
       
           echo "🔒 Chart.lock Dependencies:"
-          LOCK_DEPS=$(yq -r '.dependencies[] | "\(.name):\(.version)"' "$LOCK_FILE" | sort)
-          echo "$LOCK_DEPS"
+          yq -r '.dependencies[] | "\(.name): \(.version)"' "$LOCK_FILE" | sort > chart_lock_deps.txt
+          cat chart_lock_deps.txt
       
-          if [ "$YAML_DEPS" != "$LOCK_DEPS" ]; then
-            echo "❌ Mismatch between Chart.yaml and Chart.lock dependency versions!"
-            echo "Please run: helm dependency update charts/onelens-agent"
+          echo ""
+          echo "🔍 Comparing Chart.yaml and Chart.lock..."
+      
+          if ! diff -u chart_yaml_deps.txt chart_lock_deps.txt > deps_diff.txt; then
+            echo "❌ Dependency version mismatch between Chart.yaml and Chart.lock!"
+            cat deps_diff.txt
+            echo ""
+            echo "💡 Run: helm dependency update charts/onelens-agent"
             exit 1
           else
             echo "✅ Chart.lock matches the dependency versions in Chart.yaml"
           fi
+
 
 
 
