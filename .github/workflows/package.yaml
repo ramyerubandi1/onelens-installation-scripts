@@ -111,21 +111,24 @@ jobs:
           LOCK_FILE="charts/onelens-agent/Chart.lock"
       
           echo "📦 Chart.yaml Dependencies:"
-          yq -r '.dependencies[] | "\(.name): \(.version)"' "$CHART_FILE" | sort > chart_yaml_deps.txt
+          yq e -o=json "$CHART_FILE" | jq -r '.dependencies[] | "\(.name): \(.version)"' | sort > chart_yaml_deps.txt
           cat chart_yaml_deps.txt
       
           echo "🔒 Chart.lock Dependencies:"
-          yq -r '.dependencies[] | "\(.name): \(.version)"' "$LOCK_FILE" | sort > chart_lock_deps.txt
+          yq e -o=json "$LOCK_FILE" | jq -r '.dependencies[] | "\(.name): \(.version)"' | sort > chart_lock_deps.txt
           cat chart_lock_deps.txt
       
           echo ""
           echo "🔍 Comparing Chart.yaml and Chart.lock dependency versions..."
       
-          # Compare dependency versions per name, fail if any version mismatch
+          MISMATCH=0
           while read -r line; do
             NAME=$(echo "$line" | cut -d':' -f1)
             VERSION_YAML=$(echo "$line" | cut -d':' -f2 | tr -d ' ')
-            VERSION_LOCK=$(grep "^$NAME:" chart_lock_deps.txt | cut -d':' -f2 | tr -d ' ' || echo "MISSING")
+            VERSION_LOCK=$(grep "^$NAME:" chart_lock_deps.txt | cut -d':' -f2 | tr -d ' ')
+            if [ -z "$VERSION_LOCK" ]; then
+              VERSION_LOCK="MISSING"
+            fi
       
             if [ "$VERSION_YAML" != "$VERSION_LOCK" ]; then
               echo "❌ Version mismatch for dependency '$NAME': Chart.yaml has '$VERSION_YAML', Chart.lock has '$VERSION_LOCK'"
@@ -133,13 +136,14 @@ jobs:
             fi
           done < chart_yaml_deps.txt
       
-          if [ "${MISMATCH:-0}" -eq 1 ]; then
+          if [ "$MISMATCH" -eq 1 ]; then
             echo ""
             echo "💡 Run: helm dependency update charts/onelens-agent"
             exit 1
           else
             echo "✅ All dependency versions match between Chart.yaml and Chart.lock"
           fi
+
 
 
 
