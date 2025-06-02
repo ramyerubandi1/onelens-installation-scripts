@@ -110,16 +110,18 @@ jobs:
           CHART_FILE="charts/onelens-agent/Chart.yaml"
           LOCK_FILE="charts/onelens-agent/Chart.lock"
 
-          # Only run if Chart.yaml has changed
           PREV_COMMIT=$(git rev-parse HEAD^)
+
           if git diff --quiet "$PREV_COMMIT" -- "$CHART_FILE"; then
             echo "No changes to $CHART_FILE detected. Skipping lock check."
             exit 0
           fi
 
-          # Read dependency versions from Chart.yaml and Chart.lock
-          YAML_VERSIONS=$(yq '.dependencies[] | "\(.name):\(.version)"' "$CHART_FILE" | sort)
-          LOCK_VERSIONS=$(yq '.dependencies[] | "\(.name):\(.version)"' "$LOCK_FILE" | sort)
+          # Extract and sort dependencies from Chart.yaml
+          YAML_VERSIONS=$(yq -o=json '.dependencies[] | {name, version}' "$CHART_FILE" | jq -r '"\(.name):\(.version)"' | sort)
+
+          # Extract and sort dependencies from Chart.lock
+          LOCK_VERSIONS=$(yq -o=json '.dependencies[] | {name, version}' "$LOCK_FILE" | jq -r '"\(.name):\(.version)"' | sort)
 
           echo "📦 Chart.yaml Dependencies:"
           echo "$YAML_VERSIONS"
@@ -133,6 +135,7 @@ jobs:
           else
             echo "✅ Chart.lock matches the dependency versions in Chart.yaml"
           fi
+
 
 
 
