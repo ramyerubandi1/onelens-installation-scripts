@@ -28,21 +28,37 @@ jobs:
         run: |
           CHART_FILE="charts/onelens-agent/Chart.yaml"
           
-          git fetch origin main
-          git diff origin/main -- "$CHART_FILE" > chart_diff.txt
+          # Get the previous commit
+          PREV_COMMIT=$(git rev-parse HEAD^)
 
-          # Extract whether dependencies version was changed
-          dep_changed=$(grep -E '^\+.*dependencies:|^\+.*version:' chart_diff.txt | grep -v '^+ *version: 0\.1\.1-beta\.4' || true)
-          
-          # Extract whether version or appVersion changed
-          version_changed=$(grep -E '^\+ *version:' chart_diff.txt || true)
-          app_version_changed=$(grep -E '^\+ *appVersion:' chart_diff.txt || true)
-
-          if [[ -n "$dep_changed" && ( -z "$version_changed" || -z "$app_version_changed" ) ]]; then
-            echo "❌ Dependency version changed, but version or appVersion was not updated."
-            echo "Please update both 'version' and 'appVersion' in Chart.yaml."
-            exit 1
+          # Check if the Chart.yaml file was changed
+          if git diff --quiet "$PREV_COMMIT" -- "$CHART_FILE"; then
+            echo "No changes to $CHART_FILE detected. Skipping version check."
+            exit 0
           fi
+
+          # Extract current and previous values
+          OLD_DEP_VERSIONS=$(git show "$PREV_COMMIT:$CHART_FILE" | yq '.dependencies[].version')
+          NEW_DEP_VERSIONS=$(cat "$CHART_FILE" | yq '.dependencies[].version')
+
+          OLD_CHART_VERSION=$(git show "$PREV_COMMIT:$CHART_FILE" | yq '.version')
+          NEW_CHART_VERSION=$(cat "$CHART_FILE" | yq '.version')
+
+          OLD_APP_VERSION=$(git show "$PREV_COMMIT:$CHART_FILE" | yq '.appVersion')
+          NEW_APP_VERSION=$(cat "$CHART_FILE" | yq '.appVersion')
+
+          if [ "$OLD_DEP_VERSIONS" != "$NEW_DEP_VERSIONS" ]; then
+            echo "⚠️ Detected a change in dependency versions."
+            if [ "$OLD_CHART_VERSION" = "$NEW_CHART_VERSION" ] || [ "$OLD_APP_VERSION" = "$NEW_APP_VERSION" ]; then
+              echo "❌ Dependency version changed, but version or appVersion not updated."
+              echo "Old Chart version: $OLD_CHART_VERSION"
+              echo "New Chart version: $NEW_CHART_VERSION"
+              echo "Old App version: $OLD_APP_VERSION"
+              echo "New App version: $NEW_APP_VERSION"
+              exit 1
+            fi
+          fi
+
 
       - name: All checks passed
         run: echo "✅ All checks passed. No packaging or publishing steps executed."
