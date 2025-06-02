@@ -3,7 +3,7 @@ name: Package Onelens-Agent Helm Chart
 on:
   push:
     branches:
-      - main
+      - onelens-workflow
   workflow_dispatch:
 
 jobs:
@@ -52,14 +52,14 @@ jobs:
             test "$(printf '%s\n%s\n' "$1" "$2" | sort -V | head -n1)" != "$2"
           }
 
-          # Get dependencies in name:version format (FIXED)
-          old_deps=$(yq e '.dependencies[] | "\( .name ):\( .version )"' tmp/old/Chart.yaml | sort || echo '')
-          new_deps=$(yq e '.dependencies[] | "\( .name ):\( .version )"' tmp/new/Chart.yaml | sort || echo '')
+          # Print dependencies with versions for clarity
+          echo "Old dependencies (name:version):"
+          yq e '.dependencies[] | "\(.name):\(.version)"' tmp/old/Chart.yaml || echo "None"
+          echo "New dependencies (name:version):"
+          yq e '.dependencies[] | "\(.name):\(.version)"' tmp/new/Chart.yaml || echo "None"
 
-          echo "Old dependencies:"
-          echo "$old_deps"
-          echo "New dependencies:"
-          echo "$new_deps"
+          old_deps=$(yq e '.dependencies[] | "\(.name):\(.version)"' tmp/old/Chart.yaml | sort || echo '')
+          new_deps=$(yq e '.dependencies[] | "\(.name):\(.version)"' tmp/new/Chart.yaml | sort || echo '')
 
           dep_changed=false
           while IFS= read -r dep; do
@@ -100,13 +100,13 @@ jobs:
             fi
             echo "✅ version.md entry found for $new_version"
 
-            # Compare Chart.yaml and Chart.lock deps
-            chart_deps=$(yq e '.dependencies[] | "\( .name ):\( .version )"' tmp/new/Chart.yaml | sort)
-            lock_deps=$(yq e '.dependencies[] | "\( .name ):\( .version )"' tmp/new/Chart.lock | sort)
+            # Compare Chart.yaml and Chart.lock deps (ignore alias/condition)
+            chart_deps=$(yq e '.dependencies[] | "\(.name):\(.version)"' tmp/new/Chart.yaml | sort)
+            lock_deps=$(yq e '.dependencies[] | "\(.name):\(.version)"' tmp/new/Chart.lock | sort)
 
-            echo "Chart.yaml deps:"
+            echo "Chart.yaml deps (name:version):"
             echo "$chart_deps"
-            echo "Chart.lock deps:"
+            echo "Chart.lock deps (name:version):"
             echo "$lock_deps"
 
             if [ "$chart_deps" != "$lock_deps" ]; then
