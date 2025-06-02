@@ -24,5 +24,25 @@ jobs:
         with:
           version: v3.13.3
 
+      - name: Check if dependency version changed but chart version not updated
+        run: |
+          CHART_FILE="charts/onelens-agent/Chart.yaml"
+          
+          git fetch origin main
+          git diff origin/main -- "$CHART_FILE" > chart_diff.txt
+
+          # Extract whether dependencies version was changed
+          dep_changed=$(grep -E '^\+.*dependencies:|^\+.*version:' chart_diff.txt | grep -v '^+ *version: 0\.1\.1-beta\.4' || true)
+          
+          # Extract whether version or appVersion changed
+          version_changed=$(grep -E '^\+ *version:' chart_diff.txt || true)
+          app_version_changed=$(grep -E '^\+ *appVersion:' chart_diff.txt || true)
+
+          if [[ -n "$dep_changed" && ( -z "$version_changed" || -z "$app_version_changed" ) ]]; then
+            echo "❌ Dependency version changed, but version or appVersion was not updated."
+            echo "Please update both 'version' and 'appVersion' in Chart.yaml."
+            exit 1
+          fi
+
       - name: All checks passed
         run: echo "✅ All checks passed. No packaging or publishing steps executed."
